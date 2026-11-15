@@ -49,7 +49,7 @@ function aplicarMascaraMoeda(valor) {
   if (!v) return "R$ 0,00";
   v = (parseInt(v, 10) / 100).toFixed(2);
   let partes = v.split(".");
-  partes[0] = partes[0].replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  partes = partes.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
   return "R$ " + partes.join(",");
 }
 
@@ -587,8 +587,11 @@ window.agendarNaData = (dataISO) => {
 };
 
 window.enviarComprovanteWhats = (id) => {
-  const ev = eventosCache.find(item => item.id === id);
-  if (!ev) return;
+  const ev = eventosCache.find(item => String(item.id) === String(id));
+  if (!ev) {
+    alert("Evento não encontrado. Recarregue a página.");
+    return;
+  }
 
   let numLimpo = String(ev.telefone || "").replace(/\D/g, "");
   if (numLimpo.startsWith("55") && numLimpo.length >= 12) {
@@ -596,7 +599,7 @@ window.enviarComprovanteWhats = (id) => {
   }
 
   if (numLimpo.length < 10) {
-    alert("⚠️ Número de WhatsApp inválido. Edite o evento e informe o DDD + número (ex: 85999999999).");
+    alert("⚠️ Telefone inválido! Edite o evento e informe o DDD + número (ex: 85999999999).");
     return;
   }
 
@@ -614,15 +617,7 @@ window.enviarComprovanteWhats = (id) => {
     `⏳ *Saldo Restante:* ${formatarBRL(restante)}\n\n` +
     `_Agradecemos a preferência!_`;
 
-  const url = `https://whatsapp.com{numLimpo}&text=${encodeURIComponent(mensagem)}`;
-  
-  const link = document.createElement("a");
-  link.href = url;
-  link.target = "_blank";
-  link.rel = "noopener noreferrer";
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
+  window.location.href = `https://wa.me{numLimpo}?text=${encodeURIComponent(mensagem)}`;
 };
 
 
