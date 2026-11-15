@@ -554,10 +554,12 @@ window.gerarReciboPDF = (id) => {
   if (!ev) return;
   const periodoBR = formatarPeriodoBR(ev);
   const restante = Math.max(0, (ev.valorTotal || 0) - (ev.valorPago || 0));
-  document.getElementById("area-recibo").innerHTML = `
-    <div style="border: 2px solid #000; padding: 24px; max-width: 700px; margin: 0 auto;">
+  const areaRecibo = document.getElementById("area-recibo");
+
+  areaRecibo.innerHTML = `
+    <div style="border: 2px solid #000; padding: 24px; max-width: 700px; margin: 0 auto; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
       <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 14px; margin-bottom: 20px;">
-        <img src="/icon.png" alt="JM Eventos" style="width: 85px; height: 85px; border-radius: 50%; object-fit: cover; border: 2px solid #d4af37; margin-bottom: 8px;">
+        <img id="logo-recibo-img" src="/icon.png" alt="JM Eventos" style="width: 110px; height: 110px; border-radius: 50%; object-fit: contain; background-color: #000000; border: 2px solid #d4af37; margin-bottom: 8px;">
         <h1 style="margin: 0; font-size: 24px; letter-spacing: 1px;">JM EVENTOS</h1>
         <p style="margin: 4px 0 0 0; font-size: 14px;">Comprovante de Locação e Reserva de Espaço</p>
       </div>
@@ -577,8 +579,16 @@ window.gerarReciboPDF = (id) => {
         <div style="width: 45%; border-top: 1px solid #000; padding-top: 6px;">${ev.cliente} (Locatário)</div>
       </div>
     </div>`;
-  setTimeout(() => window.print(), 200);
+
+  const imgLogo = document.getElementById("logo-recibo-img");
+  if (imgLogo.complete) {
+    window.print();
+  } else {
+    imgLogo.onload = () => window.print();
+    imgLogo.onerror = () => window.print();
+  }
 };
+
 
 
 function abrirModal() {
