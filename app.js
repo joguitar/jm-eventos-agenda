@@ -1,22 +1,69 @@
 // 🔐 SENHA DE ACESSO DO APP
 const SENHA_ACESSO = "1234";
 
-
-const SUPABASE_URL = "https://dpdvvwnybjoeyzqgdaru.supabase.co";
+// 🟢 CONFIGURAÇÃO SUPABASE JM-EVENTOS
+const SUPABASE_URL = "https://supabase.co";
 const SUPABASE_KEY = "sb_publishable_Bbu0Z3jm3USgVhkn8dFuTA_qoPgtoct";
 
 const API_URL = `${SUPABASE_URL}/rest/v1/eventos`;
+const CLIENTES_URL = `${SUPABASE_URL}/rest/v1/clientes`;
+
 const HEADERS = {
   "apikey": SUPABASE_KEY,
   "Content-Type": "application/json",
   "Prefer": "return=representation"
 };
 
-
-
 let eventosCache = [];
+let clientesCache = [];
 
-// 1. TELA DE SENHA E BLOQUEIO
+// ==========================================
+// 1. MÁSCARAS DE TELEFONE E MOEDA (R$)
+// ==========================================
+function aplicarMascaraTelefone(valor) {
+  let v = String(valor || "").replace(/\D/g, "").slice(0, 11);
+  if (v.length > 6) {
+    return v.replace(/^(\d{2})(\d{5})(\d{0,4}).*/, "($1) $2-$3");
+  } else if (v.length > 2) {
+    return v.replace(/^(\d{2})(\d{0,5})/, "($1) $2");
+  } else if (v.length > 0) {
+    return v.replace(/^(\d*)/, "($1");
+  }
+  return "";
+}
+
+function aplicarMascaraMoeda(valor) {
+  let v = String(valor || "").replace(/\D/g, "");
+  if (!v) return "R$ 0,00";
+  const num = (parseInt(v, 10) / 100).toFixed(2);
+  const partes = num.split(".");
+  partes = partes.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  return `R$ ${partes.join(",")}`;
+}
+
+function desformatarMoeda(texto) {
+  if (typeof texto === "number") return texto;
+  const limpo = String(texto || "").replace(/[^\d,]/g, "").replace(",", ".");
+  return parseFloat(limpo) || 0;
+}
+
+document.getElementById("telefone").addEventListener("input", (e) => {
+  e.target.value = aplicarMascaraTelefone(e.target.value);
+});
+
+document.getElementById("cad-telefone").addEventListener("input", (e) => {
+  e.target.value = aplicarMascaraTelefone(e.target.value);
+});
+
+["valorTotal", "valorPago", "despesas"].forEach((id) => {
+  document.getElementById(id).addEventListener("input", (e) => {
+    e.target.value = aplicarMascaraMoeda(e.target.value);
+  });
+});
+
+// ==========================================
+// 2. TELA DE SENHA E BLOQUEIO
+// ==========================================
 const telaLogin = document.getElementById("tela-login");
 const inputSenha = document.getElementById("input-senha");
 const erroSenha = document.getElementById("erro-senha");
@@ -44,15 +91,14 @@ document.getElementById("btn-sair").addEventListener("click", () => {
   sessionStorage.removeItem("jm_auth");
   telaLogin.style.display = "flex";
 });
-// 2. CARREGAMENTO DA NUVEM (SUPABASE)
+// ==========================================
+// 3. SINCRONIZAÇÃO COM SUPABASE (EVENTOS E CLIENTES)
+// ==========================================
 async function carregarEventos() {
   const statusEl = document.getElementById("status-conexao");
   try {
     const res = await fetch(`${API_URL}?select=*&order=data.asc`, { headers: HEADERS });
-    if (!res.ok) {
-      const errTxt = await res.text();
-      throw new Error(errTxt);
-    }
+    if (!res.ok) throw new Error(await res.text());
     const lista = await res.json();
 
     eventosCache = lista.map(item => ({
@@ -72,10 +118,28 @@ async function carregarEventos() {
   }
 }
 
-carregarEventos();
-setInterval(carregarEventos, 15000);
+async function carregarClientes() {
+  try {
+    const res = await fetch(`${CLIENTES_URL}?select=*&order=nome.asc`, { headers: HEADERS });
+    if (!res.ok) return;
+    clientesCache = await res.json();
+    renderizarClientes();
+    atualizarSelectClientes();
+  } catch (err) {
+    console.error("Erro ao carregar clientes:", err);
+  }
+}
 
-// 3. DATA ATUAL E ABAS
+carregarEventos();
+carregarClientes();
+setInterval(() => {
+  carregarEventos();
+  carregarClientes();
+}, 15000);
+
+// ==========================================
+// 4. DATA ATUAL E NAVEGAÇÃO ENTRE ABAS
+// ==========================================
 const filtroMes = document.getElementById("filtro-mes");
 const hoje = new Date();
 filtroMes.value = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, "0")}`;
@@ -88,9 +152,94 @@ document.querySelectorAll(".tab-btn").forEach(btn => {
     document.getElementById("view-lista").style.display = view === "lista" ? "flex" : "none";
     document.getElementById("box-filtros").style.display = view === "lista" ? "flex" : "none";
     document.getElementById("view-calendario").style.display = view === "calendario" ? "block" : "none";
+    document.getElementById("view-clientes").style.display = view === "clientes" ? "block" : "none";
   });
 });
-// 4. SALVAR E EDITAR EVENTOS
+// ==========================================
+// 5. CADASTRO E LISTAGEM DE CLIENTES
+// ==========================================
+document.getElementById("form-cliente").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const btn = document.getElementById("btn-salvar-cliente");
+  btn.disabled = true;
+  btn.innerText = "⏳ Salvando...";
+
+  const nome = document.getElementById("cad-nome").value.trim();
+  const telefone = document.getElementById("cad-telefone").value.trim();
+
+  try {
+    const res = await fetch(CLIENTES_URL, {
+      method: "POST",
+      headers: HEADERS,
+      body: JSON.stringify({ nome, telefone })
+    });
+    if (!res.ok) throw new Error(await res.text());
+
+    document.getElementById("form-cliente").reset();
+    await carregarClientes();
+  } catch (err) {
+    alert("Erro ao salvar cliente (verifique se criou a tabela 'clientes' no Supabase): " + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerText = "Salvar Cliente";
+  }
+});
+
+function renderizarClientes() {
+  const lista = document.getElementById("lista-clientes");
+  const termo = document.getElementById("busca-cliente").value.toLowerCase();
+
+  const filtrados = clientesCache.filter(c =>
+    c.nome.toLowerCase().includes(termo) || c.telefone.includes(termo)
+  );
+
+  if (filtrados.length === 0) {
+    lista.innerHTML = `<p class="msg-vazia">Nenhum cliente cadastrado.</p>`;
+    return;
+  }
+
+  lista.innerHTML = filtrados.map(c => {
+    const numLimpo = c.telefone.replace(/\D/g, "");
+    return `
+      <div class="event-item" style="display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <h3 class="event-title" style="margin:0 0 4px 0;">${c.nome}</h3>
+          <div class="event-meta" style="margin:0;">📞 ${aplicarMascaraTelefone(c.telefone)}</div>
+        </div>
+        <div style="display:flex; gap:6px;">
+          <a href="https://wa.me{numLimpo}" target="_blank" class="btn-act btn-whats" style="padding:8px 12px; text-decoration:none;">WhatsApp</a>
+          <button type="button" class="btn-act btn-del" style="padding:8px 10px;" onclick="excluirCliente('${c.id}')">🗑️</button>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+function atualizarSelectClientes() {
+  const sel = document.getElementById("select-cliente-rapido");
+  sel.innerHTML = `<option value="">-- Selecionar cliente salvo --</option>` +
+    clientesCache.map(c => `<option value="${c.id}">${c.nome} (${aplicarMascaraTelefone(c.telefone)})</option>`).join("");
+}
+
+document.getElementById("select-cliente-rapido").addEventListener("change", (e) => {
+  const cli = clientesCache.find(c => c.id === e.target.value);
+  if (cli) {
+    document.getElementById("cliente").value = cli.nome;
+    document.getElementById("telefone").value = aplicarMascaraTelefone(cli.telefone);
+  }
+});
+
+window.excluirCliente = async (id) => {
+  if (confirm("Remover este cliente da lista?")) {
+    await fetch(`${CLIENTES_URL}?id=eq.${id}`, { method: "DELETE", headers: HEADERS });
+    await carregarClientes();
+  }
+};
+
+document.getElementById("busca-cliente").addEventListener("input", renderizarClientes);
+// ==========================================
+// 6. SALVAR E EDITAR EVENTOS
+// ==========================================
 document.getElementById("form-evento").addEventListener("submit", async (e) => {
   e.preventDefault();
   const btnSalvar = document.getElementById("btn-salvar");
@@ -126,9 +275,9 @@ document.getElementById("form-evento").addEventListener("submit", async (e) => {
     status: statusEvento,
     data: dataEvento,
     turno: turnoEvento,
-    valor_total: parseFloat(document.getElementById("valorTotal").value) || 0,
-    valor_pago: parseFloat(document.getElementById("valorPago").value) || 0,
-    despesas: parseFloat(document.getElementById("despesas").value) || 0,
+    valor_total: desformatarMoeda(document.getElementById("valorTotal").value),
+    valor_pago: desformatarMoeda(document.getElementById("valorPago").value),
+    despesas: desformatarMoeda(document.getElementById("despesas").value),
     pagamento: document.getElementById("pagamento").value,
     obs: document.getElementById("obs").value.trim()
   };
@@ -158,7 +307,10 @@ document.getElementById("form-evento").addEventListener("submit", async (e) => {
     btnSalvar.innerText = "💾 Salvar na Nuvem";
   }
 });
-// 5. FINANCEIRO E LISTA DE CARDS
+
+// ==========================================
+// 7. FINANCEIRO E LISTA DE EVENTOS
+// ==========================================
 function formatarBRL(val) {
   return (val || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
@@ -234,7 +386,9 @@ function renderizarLista(eventosMes) {
     `;
   }).join("");
 }
-// 6. CALENDÁRIO VISUAL, WHATSAPP, PDF E MODAL
+// ==========================================
+// 8. CALENDÁRIO VISUAL, WHATSAPP, PDF E MODAL
+// ==========================================
 function renderizarCalendario(mesSel, eventosMes) {
   const grid = document.getElementById("cal-grid");
   const detalhe = document.getElementById("cal-detalhe-dia");
@@ -316,7 +470,7 @@ window.gerarReciboPDF = (id) => {
       </div>
       <h2 style="font-size: 18px; margin-bottom: 12px;">RECIBO / FICHA DE RESERVA</h2>
       <p><strong>Cliente:</strong> ${ev.cliente}</p>
-      <p><strong>Telefone:</strong> ${ev.telefone}</p>
+      <p><strong>Telefone:</strong> ${aplicarMascaraTelefone(ev.telefone)}</p>
       <p><strong>Tipo de Evento:</strong> ${ev.tipo} ${ev.convidados ? `(${ev.convidados} convidados)` : ''}</p>
       <p><strong>Data Reservada:</strong> ${dataBR} — <strong>Turno:</strong> ${ev.turno}</p>
       <p><strong>Status Atual:</strong> ${ev.status.toUpperCase()}</p>
@@ -336,6 +490,9 @@ window.gerarReciboPDF = (id) => {
 function abrirModal() {
   document.getElementById("form-evento").reset();
   document.getElementById("evento-id").value = "";
+  document.getElementById("valorTotal").value = "R$ 0,00";
+  document.getElementById("valorPago").value = "R$ 0,00";
+  document.getElementById("despesas").value = "R$ 0,00";
   document.getElementById("modal-titulo").innerText = "Novo Agendamento";
   document.getElementById("modal-form").classList.add("active");
 }
@@ -349,15 +506,15 @@ window.editarEvento = (id) => {
   if (!ev) return;
   document.getElementById("evento-id").value = ev.id;
   document.getElementById("cliente").value = ev.cliente;
-  document.getElementById("telefone").value = ev.telefone;
+  document.getElementById("telefone").value = aplicarMascaraTelefone(ev.telefone);
   document.getElementById("convidados").value = ev.convidados || "";
   document.getElementById("tipo").value = ev.tipo;
   document.getElementById("status").value = ev.status;
   document.getElementById("data").value = ev.data;
   document.getElementById("turno").value = ev.turno;
-  document.getElementById("valorTotal").value = ev.valorTotal;
-  document.getElementById("valorPago").value = ev.valorPago;
-  document.getElementById("despesas").value = ev.despesas || 0;
+  document.getElementById("valorTotal").value = formatarBRL(ev.valorTotal);
+  document.getElementById("valorPago").value = formatarBRL(ev.valorPago);
+  document.getElementById("despesas").value = formatarBRL(ev.despesas || 0);
   document.getElementById("pagamento").value = ev.pagamento || "PIX";
   document.getElementById("obs").value = ev.obs || "";
   document.getElementById("modal-titulo").innerText = "Editar Agendamento";
