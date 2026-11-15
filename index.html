@@ -66,6 +66,7 @@
     <button type="button" class="tab-btn active" data-view="lista">📋 Eventos</button>
     <button type="button" class="tab-btn" data-view="calendario">📅 Calendário</button>
     <button type="button" class="tab-btn" data-view="clientes">👥 Clientes</button>
+    <button type="button" class="tab-btn" data-view="regras">⚙️ Regras</button>
   </div>
   <div class="filters" id="box-filtros">
     <input type="text" id="busca" placeholder="🔍 Buscar cliente, telefone ou evento...">
@@ -120,6 +121,19 @@
       <p class="msg-vazia">Carregando clientes...</p>
     </div>
   </div>
+    <div id="view-regras" style="display: none;">
+    <form id="form-regras" class="finance-dashboard">
+      <div class="finance-top"><span>📜 Regras Gerais (Recibo e WhatsApp)</span></div>
+      <p style="font-size: 0.82rem; color: var(--text-muted); margin-top: 0;">
+        Este texto será exibido automaticamente no recibo PDF e no comprovante de WhatsApp de todos os clientes.
+      </p>
+      <div class="form-group">
+        <textarea id="texto-regras-gerais" rows="12" required></textarea>
+      </div>
+      <button type="submit" class="btn-gold" id="btn-salvar-regras">💾 Salvar Regras na Nuvem</button>
+    </form>
+  </div>
+
 </main>
 
 <button type="button" class="fab no-print" id="btn-novo" title="Novo Agendamento">+</button>
