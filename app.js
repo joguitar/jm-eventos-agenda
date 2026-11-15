@@ -30,72 +30,7 @@ let eventosCache = [];
 let clientesCache = [];
 
 // ==========================================
-// 1. MÁSCARAS DE TELEFONE, MOEDA E DATAS
-// ==========================================
-function aplicarMascaraTelefone(valor) {
-  let v = String(valor || "").replace(/\D/g, "").slice(0, 11);
-  if (v.length > 6) {
-    return v.replace(/^(\d{2})(\d{5})(\d{0,4}).*/, "($1) $2-$3");
-  } else if (v.length > 2) {
-    return v.replace(/^(\d{2})(\d{0,5})/, "($1) $2");
-  } else if (v.length > 0) {
-    return v.replace(/^(\d*)/, "($1");
-  }
-  return "";
-}
-
-function aplicarMascaraMoeda(valor) {
-  let v = String(valor || "").replace(/\D/g, "");
-  if (!v) return "R$ 0,00";
-  v = (parseInt(v, 10) / 100).toFixed(2);
-  let partes = v.split(".");
-  partes[0] = partes[0].replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-  return "R$ " + partes.join(",");
-}
-
-["valorTotal", "valorPago", "despesas"].forEach((id) => {
-  const campo = document.getElementById(id);
-  campo.addEventListener("input", (e) => {
-    e.target.value = aplicarMascaraMoeda(e.target.value);
-    e.target.setSelectionRange(e.target.value.length, e.target.value.length);
-  });
-  campo.addEventListener("focus", (e) => {
-    e.target.setSelectionRange(e.target.value.length, e.target.value.length);
-  });
-});
-
-
-function desformatarMoeda(texto) {
-  if (typeof texto === "number") return texto;
-  const limpo = String(texto || "").replace(/[^\d,]/g, "").replace(",", ".");
-  return parseFloat(limpo) || 0;
-}
-
-document.getElementById("telefone").addEventListener("input", (e) => {
-  e.target.value = aplicarMascaraTelefone(e.target.value);
-});
-
-document.getElementById("cad-telefone").addEventListener("input", (e) => {
-  e.target.value = aplicarMascaraTelefone(e.target.value);
-});
-
-["valorTotal", "valorPago", "despesas"].forEach((id) => {
-  document.getElementById(id).addEventListener("input", (e) => {
-    e.target.value = aplicarMascaraMoeda(e.target.value);
-  });
-});
-
-document.getElementById("data").addEventListener("change", (e) => {
-  const dataIni = e.target.value;
-  const campoFim = document.getElementById("dataFim");
-  campoFim.min = dataIni;
-  if (!campoFim.value || campoFim.value < dataIni) {
-    campoFim.value = dataIni;
-  }
-});
-
-// ==========================================
-// 2. TELA DE SENHA E BLOQUEIO
+// 1. TELA DE SENHA E BLOQUEIO (PRIMEIRO DE TUDO)
 // ==========================================
 const telaLogin = document.getElementById("tela-login");
 const inputSenha = document.getElementById("input-senha");
@@ -123,6 +58,64 @@ inputSenha.addEventListener("keypress", (e) => { if (e.key === "Enter") validarL
 document.getElementById("btn-sair").addEventListener("click", () => {
   sessionStorage.removeItem("jm_auth");
   telaLogin.style.display = "flex";
+});
+
+// ==========================================
+// 2. MÁSCARAS DE TELEFONE, MOEDA E DATAS
+// ==========================================
+function aplicarMascaraTelefone(valor) {
+  let v = String(valor || "").replace(/\D/g, "").slice(0, 11);
+  if (v.length > 6) {
+    return v.replace(/^(\d{2})(\d{5})(\d{0,4}).*/, "($1) $2-$3");
+  } else if (v.length > 2) {
+    return v.replace(/^(\d{2})(\d{0,5})/, "($1) $2");
+  } else if (v.length > 0) {
+    return v.replace(/^(\d*)/, "($1");
+  }
+  return "";
+}
+
+function aplicarMascaraMoeda(valor) {
+  let v = String(valor || "").replace(/\D/g, "");
+  if (!v) return "R$ 0,00";
+  v = (parseInt(v, 10) / 100).toFixed(2);
+  let partes = v.split(".");
+  partes = partes.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  return "R$ " + partes.join(",");
+}
+
+function desformatarMoeda(texto) {
+  if (typeof texto === "number") return texto;
+  const limpo = String(texto || "").replace(/[^\d,]/g, "").replace(",", ".");
+  return parseFloat(limpo) || 0;
+}
+
+document.getElementById("telefone").addEventListener("input", (e) => {
+  e.target.value = aplicarMascaraTelefone(e.target.value);
+});
+
+document.getElementById("cad-telefone").addEventListener("input", (e) => {
+  e.target.value = aplicarMascaraTelefone(e.target.value);
+});
+
+["valorTotal", "valorPago", "despesas"].forEach((id) => {
+  const campo = document.getElementById(id);
+  campo.addEventListener("input", (e) => {
+    e.target.value = aplicarMascaraMoeda(e.target.value);
+    e.target.setSelectionRange(e.target.value.length, e.target.value.length);
+  });
+  campo.addEventListener("focus", (e) => {
+    e.target.setSelectionRange(e.target.value.length, e.target.value.length);
+  });
+});
+
+document.getElementById("data").addEventListener("change", (e) => {
+  const dataIni = e.target.value;
+  const campoFim = document.getElementById("dataFim");
+  campoFim.min = dataIni;
+  if (!campoFim.value || campoFim.value < dataIni) {
+    campoFim.value = dataIni;
+  }
 });
 // ==========================================
 // 3. SINCRONIZAÇÃO COM SUPABASE (EVENTOS, CLIENTES E REGRAS)
@@ -334,7 +327,7 @@ function renderizarClientes() {
           <div class="event-meta" style="margin:0;">📞 ${aplicarMascaraTelefone(c.telefone)}</div>
         </div>
         <div style="display:flex; gap:6px;">
-          <a href="https://wa.me{numLimpo}" target="_blank" class="btn-act btn-whats" style="padding:8px 12px; text-decoration:none;">WhatsApp</a>
+          <a href="https://whatsapp.com{numLimpo}" target="_blank" rel="noopener noreferrer" class="btn-act btn-whats" style="padding:8px 12px; text-decoration:none;">WhatsApp</a>
           <button type="button" class="btn-act btn-del" style="padding:8px 10px;" onclick="excluirCliente('${c.id}')">🗑️</button>
         </div>
       </div>`;
@@ -364,7 +357,7 @@ window.excluirCliente = async (id) => {
 
 document.getElementById("busca-cliente").addEventListener("input", renderizarClientes);
 // ==========================================
-// 6. SALVAR E EDITAR EVENTOS (SEM CAMPO OBS)
+// 6. SALVAR E EDITAR EVENTOS
 // ==========================================
 document.getElementById("form-evento").addEventListener("submit", async (e) => {
   e.preventDefault();
@@ -547,10 +540,8 @@ function renderizarLista(eventosMes) {
       </div>`;
   }).join("");
 }
-in("");
-}
 // ==========================================
-// 8. CALENDÁRIO, WHATSAPP, RECIBO PDF E MODAL
+// 8. CALENDÁRIO VISUAL, RECIBO PDF E MODAL
 // ==========================================
 function renderizarCalendario(mesSel, todosEventos) {
   const grid = document.getElementById("cal-grid");
@@ -609,44 +600,8 @@ window.agendarNaData = (dataISO) => {
   document.getElementById("dataFim").min = dataISO;
 };
 
-window.enviarComprovanteWhats = (id) => {
-  const ev = eventosCache.find(item => String(item.id) === String(id));
-  if (!ev) {
-    alert("Evento não encontrado. Recarregue a página.");
-    return;
-  }
-
-  let numLimpo = String(ev.telefone || "").replace(/\D/g, "");
-  if (numLimpo.startsWith("55") && numLimpo.length >= 12) {
-    numLimpo = numLimpo.slice(2);
-  }
-
-  if (numLimpo.length < 10) {
-    alert("⚠️ Telefone inválido! Edite o evento e informe o DDD + número (ex: 85999999999).");
-    return;
-  }
-
-  const periodoBR = formatarPeriodoBR(ev);
-  const restante = Math.max(0, (ev.valorTotal || 0) - (ev.valorPago || 0));
-
-  const mensagem = `*JM EVENTOS - RESUMO DE RESERVA* ✨\n\n` +
-    `👤 *Cliente:* ${ev.cliente}\n` +
-    `🎉 *Evento:* ${ev.tipo}\n` +
-    `📅 *Período:* ${periodoBR}\n` +
-    `⏰ *Turno:* ${ev.turno}\n` +
-    `📌 *Status:* ${ev.status.toUpperCase()}\n\n` +
-    `💰 *Valor Total:* ${formatarBRL(ev.valorTotal)}\n` +
-    `✅ *Valor Pago (Sinal):* ${formatarBRL(ev.valorPago)}\n` +
-    `⏳ *Saldo Restante:* ${formatarBRL(restante)}\n\n` +
-    `_Agradecemos a preferência!_`;
-
-  window.location.href = `https://wa.me{numLimpo}?text=${encodeURIComponent(mensagem)}`;
-};
-
-
-
 window.gerarReciboPDF = (id) => {
-  const ev = eventosCache.find(item => item.id === id);
+  const ev = eventosCache.find(item => String(item.id) === String(id));
   if (!ev) return;
   const periodoBR = formatarPeriodoBR(ev);
   const restante = Math.max(0, (ev.valorTotal || 0) - (ev.valorPago || 0));
@@ -701,7 +656,7 @@ function fecharModal() {
 }
 
 window.editarEvento = (id) => {
-  const ev = eventosCache.find(item => item.id === id);
+  const ev = eventosCache.find(item => String(item.id) === String(id));
   if (!ev) return;
   document.getElementById("evento-id").value = ev.id;
   document.getElementById("cliente").value = ev.cliente;
@@ -741,6 +696,7 @@ document.getElementById("filtro-status").addEventListener("change", atualizarSis
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("/sw.js");
 }
+
 
 
 
