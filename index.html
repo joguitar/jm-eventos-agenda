@@ -79,7 +79,12 @@
     <p class="msg-vazia">Carregando agenda na nuvem...</p>
   </div>
 
-  <div id="view-calendario" class="calendar-wrapper" style="display: none;">
+    <div id="view-calendario" class="calendar-wrapper" style="display: none;">
+    <div class="cal-nav">
+      <button type="button" id="btn-mes-ant" class="btn-cal-nav">◀</button>
+      <input type="month" id="cal-mes-picker" class="month-picker">
+      <button type="button" id="btn-mes-prox" class="btn-cal-nav">▶</button>
+    </div>
     <div class="cal-legend">
       <span><i class="dot confirmado"></i> Confirmado</span>
       <span><i class="dot orcamento"></i> Pré-reserva</span>
@@ -91,6 +96,7 @@
     <div id="cal-grid" class="cal-grid"></div>
     <div id="cal-detalhe-dia" class="cal-day-detail"></div>
   </div>
+
 
   <div id="view-clientes" style="display: none;">
     <form id="form-cliente" class="finance-dashboard" style="margin-bottom: 16px;">
