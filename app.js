@@ -556,8 +556,9 @@ window.gerarReciboPDF = (id) => {
   const restante = Math.max(0, (ev.valorTotal || 0) - (ev.valorPago || 0));
   document.getElementById("area-recibo").innerHTML = `
     <div style="border: 2px solid #000; padding: 24px; max-width: 700px; margin: 0 auto;">
-      <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 12px; margin-bottom: 20px;">
-        <h1 style="margin: 0; font-size: 24px;">JM EVENTOS</h1>
+      <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 14px; margin-bottom: 20px;">
+        <img src="/icon.png" alt="JM Eventos" style="width: 85px; height: 85px; border-radius: 50%; object-fit: cover; border: 2px solid #d4af37; margin-bottom: 8px;">
+        <h1 style="margin: 0; font-size: 24px; letter-spacing: 1px;">JM EVENTOS</h1>
         <p style="margin: 4px 0 0 0; font-size: 14px;">Comprovante de Locação e Reserva de Espaço</p>
       </div>
       <h2 style="font-size: 18px; margin-bottom: 12px;">RECIBO / FICHA DE RESERVA</h2>
@@ -576,8 +577,9 @@ window.gerarReciboPDF = (id) => {
         <div style="width: 45%; border-top: 1px solid #000; padding-top: 6px;">${ev.cliente} (Locatário)</div>
       </div>
     </div>`;
-  window.print();
+  setTimeout(() => window.print(), 200);
 };
+
 
 function abrirModal() {
   document.getElementById("form-evento").reset();
