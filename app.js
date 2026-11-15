@@ -502,6 +502,24 @@ function renderizarLista(eventosMes) {
     const periodoBR = formatarPeriodoBR(ev);
     const restante = Math.max(0, (ev.valorTotal || 0) - (ev.valorPago || 0));
 
+    let numLimpo = String(ev.telefone || "").replace(/\D/g, "");
+    if (numLimpo.startsWith("55") && numLimpo.length >= 12) {
+      numLimpo = numLimpo.slice(2);
+    }
+
+    const mensagem = `*JM EVENTOS - RESUMO DE RESERVA* ✨\n\n` +
+      `👤 *Cliente:* ${ev.cliente}\n` +
+      `🎉 *Evento:* ${ev.tipo}\n` +
+      `📅 *Período:* ${periodoBR}\n` +
+      `⏰ *Turno:* ${ev.turno}\n` +
+      `📌 *Status:* ${ev.status.toUpperCase()}\n\n` +
+      `💰 *Valor Total:* ${formatarBRL(ev.valorTotal)}\n` +
+      `✅ *Valor Pago (Sinal):* ${formatarBRL(ev.valorPago)}\n` +
+      `⏳ *Saldo Restante:* ${formatarBRL(restante)}\n\n` +
+      `_Agradecemos a preferência!_`;
+
+    const linkWhats = `https://whatsapp.com{numLimpo}&text=${encodeURIComponent(mensagem)}`;
+
     return `
       <div class="event-item ${ev.status}">
         <div class="event-header">
@@ -517,18 +535,19 @@ function renderizarLista(eventosMes) {
           <span><small>Restante</small><b style="color:${restante > 0 ? '#ef4444' : '#10b981'}">${formatarBRL(restante)}</b></span>
         </div>
 
-               <div class="card-actions">
-          <button type="button" class="btn-act btn-whats" style="display:flex; align-items:center; justify-content:center; gap:5px;" onclick="enviarComprovanteWhats('${ev.id}')">
+        <div class="card-actions">
+          <a href="${linkWhats}" target="_blank" rel="noopener noreferrer" class="btn-act btn-whats" style="display:flex; align-items:center; justify-content:center; gap:5px; text-decoration:none;">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.006c.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.86s.274.072.376-.043c.101-.116.433-.506.549-.68.116-.173.231-.145.39-.087s1.011.477 1.184.564.289.13.332.202c.045.072.045.419-.1.824z"/></svg>
             <span>WhatsApp</span>
-          </button>
+          </a>
           <button type="button" class="btn-act btn-pdf" onclick="gerarReciboPDF('${ev.id}')">📄 Recibo</button>
           <button type="button" class="btn-act btn-edit" onclick="editarEvento('${ev.id}')">✏️ Editar</button>
           <button type="button" class="btn-act btn-del" onclick="excluirEvento('${ev.id}')">🗑️</button>
         </div>
-
       </div>`;
   }).join("");
+}
+in("");
 }
 // ==========================================
 // 8. CALENDÁRIO, WHATSAPP, RECIBO PDF E MODAL
