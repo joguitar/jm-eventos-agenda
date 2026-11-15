@@ -2,7 +2,7 @@
 const SENHA_ACESSO = "1234";
 
 // 🟢 CONFIGURAÇÃO SUPABASE JM-EVENTOS
-const SUPABASE_URL = "https://dpdvvwnybjoeyzqgdaru.supabase.co";
+const SUPABASE_URL = "https://supabase.co";
 const SUPABASE_KEY = "sb_publishable_Bbu0Z3jm3USgVhkn8dFuTA_qoPgtoct";
 
 const API_URL = `${SUPABASE_URL}/rest/v1/eventos`;
@@ -13,6 +13,18 @@ const HEADERS = {
   "Content-Type": "application/json",
   "Prefer": "return=representation"
 };
+
+// 📝 TEXTO PADRÃO DAS OBSERVAÇÕES DO ESPAÇO
+const TEXTO_PADRAO_OBS = `INFORMAÇÕES SOBRE ESPAÇO DE LAZER (JM EVENTOS)
+🚨⚠️⚠️⚠️⚠️⚠️⚠️⚠️
+Obs: Se deixar o espaço sujo é cobrado uma taxa de limpeza no valor de R$ 50,00 reais.
+
+🚨⚠️⚠️⚠️⚠️⚠️⚠️
+♦️ CUIDADO COM AS CRIANÇAS NA PISCINA PRA NÃO PULAR E SE MACHUCAR.
+♦️ ANTES DE ENTRAR NA PISCINA TOMAR BANHO NO CHUVEIRO.
+♦️ SOM PELO SISTEMA ALEXA.
+⚠️⚠️❌🔇 NÃO ACEITAMOS SOM DE CARRO NEM PAREDÃO.
+♦️ SOMENTE SOM AMBIENTE.`;
 
 let eventosCache = [];
 let clientesCache = [];
@@ -447,7 +459,7 @@ function renderizarLista(eventosMes) {
         </div>
         <h3 class="event-title">${ev.cliente}</h3>
         <div class="event-meta">🎉 ${ev.tipo} ${ev.convidados ? `• 👥 ${ev.convidados} conv.` : ''} • 💳 ${ev.pagamento || 'PIX'}</div>
-        ${ev.obs ? `<div class="event-obs">📝 ${ev.obs}</div>` : ''}
+        ${ev.obs ? `<div class="event-obs" style="white-space: pre-line;">📝 ${ev.obs}</div>` : ''}
 
         <div class="finance-strip">
           <span><small>Total</small><b>${formatarBRL(ev.valorTotal)}</b></span>
@@ -533,7 +545,7 @@ window.enviarComprovanteWhats = (id) => {
   const mensagem = `*JM EVENTOS - COMPROVANTE DE RESERVA* ✨\n\n` +
     `👤 *Cliente:* ${ev.cliente}\n🎉 *Evento:* ${ev.tipo}\n📅 *Período:* ${periodoBR}\n⏰ *Turno:* ${ev.turno}\n📌 *Status:* ${ev.status.toUpperCase()}\n\n` +
     `💰 *Valor Total:* ${formatarBRL(ev.valorTotal)}\n✅ *Valor Pago (Sinal):* ${formatarBRL(ev.valorPago)}\n⏳ *Saldo Restante:* ${formatarBRL(restante)}\n\n` +
-    (ev.obs ? `📝 *Observações:* ${ev.obs}\n\n` : ``) + `_Agradecemos a preferência!_`;
+    (ev.obs ? `📝 *Regras e Observações:*\n${ev.obs}\n\n` : ``) + `_Agradecemos a preferência!_`;
   window.open(`https://wa.me{numLimpo}?text=${encodeURIComponent(mensagem)}`, "_blank");
 };
 
@@ -558,7 +570,7 @@ window.gerarReciboPDF = (id) => {
       <p><strong>Valor Total Acordado:</strong> ${formatarBRL(ev.valorTotal)}</p>
       <p><strong>Valor Recebido (Sinal):</strong> ${formatarBRL(ev.valorPago)} (${ev.pagamento || 'PIX'})</p>
       <p><strong>Saldo Restante a Pagar:</strong> ${formatarBRL(restante)}</p>
-      ${ev.obs ? `<p><strong>Itens Inclusos / Observações:</strong> ${ev.obs}</p>` : ''}
+      ${ev.obs ? `<div style="white-space: pre-line; margin-top: 12px; padding: 10px; border: 1px solid #ccc;"><strong>Regras e Observações:</strong><br>${ev.obs}</div>` : ''}
       <div style="margin-top: 50px; display: flex; justify-content: space-between; text-align: center;">
         <div style="width: 45%; border-top: 1px solid #000; padding-top: 6px;">JM Eventos (Locador)</div>
         <div style="width: 45%; border-top: 1px solid #000; padding-top: 6px;">${ev.cliente} (Locatário)</div>
@@ -574,17 +586,10 @@ function abrirModal() {
   document.getElementById("valorTotal").value = "R$ 0,00";
   document.getElementById("valorPago").value = "R$ 0,00";
   document.getElementById("despesas").value = "R$ 0,00";
-  document.getElementById("obs").value = "[12:08, 15/11/2026] Josue: jm-eventos-agenda.vercel.app
-[12:51, 15/11/2026] Mica Amor: INFORMAÇÕES SOBRE ESPAÇO DE LAZER (JM EVENTOS)                                                            🚨⚠️⚠️⚠️⚠️⚠️⚠️⚠️.                         Obs: se deixa o espaço sujo é cobrado uma taxa de limpeza no valor de 50,00 reais, 
-
-🚨⚠️⚠️⚠️⚠️⚠️⚠️
-♦️ CUIDADO COM AS CRIANÇAS NA PISCINA PRA NÃO PULAR E SE MACHUCAR.                                                      ♦️ANTES DE ENTRAR NA PISCINA TOMA BANHO NO CHUVEIRO.                                                                      ♦️SOM PELO SISTEMA  ALEXA 
- ⚠️⚠️❌🔇 NÃO ACEITAMOS SOM DE CARRO NEM PAREDÃO. 
-♦️ SOMENTE SOM AMBIENTE..";
+  document.getElementById("obs").value = TEXTO_PADRAO_OBS;
   document.getElementById("modal-titulo").innerText = "Novo Agendamento";
   document.getElementById("modal-form").classList.add("active");
 }
-
 
 function fecharModal() {
   document.getElementById("modal-form").classList.remove("active");
@@ -632,6 +637,7 @@ document.getElementById("filtro-status").addEventListener("change", atualizarSis
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("/sw.js");
 }
+
 
 
 
