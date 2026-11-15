@@ -47,11 +47,23 @@ function aplicarMascaraTelefone(valor) {
 function aplicarMascaraMoeda(valor) {
   let v = String(valor || "").replace(/\D/g, "");
   if (!v) return "R$ 0,00";
-  const num = (parseInt(v, 10) / 100).toFixed(2);
-  const partes = num.split(".");
-  partes = partes.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-  return `R$ ${partes.join(",")}`;
+  v = (parseInt(v, 10) / 100).toFixed(2);
+  let partes = v.split(".");
+  partes[0] = partes[0].replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  return "R$ " + partes.join(",");
 }
+
+["valorTotal", "valorPago", "despesas"].forEach((id) => {
+  const campo = document.getElementById(id);
+  campo.addEventListener("input", (e) => {
+    e.target.value = aplicarMascaraMoeda(e.target.value);
+    e.target.setSelectionRange(e.target.value.length, e.target.value.length);
+  });
+  campo.addEventListener("focus", (e) => {
+    e.target.setSelectionRange(e.target.value.length, e.target.value.length);
+  });
+});
+
 
 function desformatarMoeda(texto) {
   if (typeof texto === "number") return texto;
