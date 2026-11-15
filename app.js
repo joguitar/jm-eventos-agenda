@@ -2,16 +2,17 @@
 const SENHA_ACESSO = "1234";
 
 // 🟢 COLE AQUI A CHAVE DO SEU SUPABASE (Publishable key ou anon key)
-const SUPABASE_URL = "https://dpdvvwnybjoeyzqgdaru.supabase.co/rest/v1/";
+const SUPABASE_URL = "https://supabase.co";
 const SUPABASE_KEY = "sb_publishable_Bbu0Z3jm3USgVhkn8dFuTA_qoPgtoct";
 
 const API_URL = `${SUPABASE_URL}/rest/v1/eventos`;
 const HEADERS = {
   "apikey": SUPABASE_KEY,
-  "Authorization": `Bearer ${"sb_publishable_Bbu0Z3jm3USgVhkn8dFuTA_qoPgtoct"s}`,
+  "Authorization": `Bearer ${SUPABASE_KEY}`,
   "Content-Type": "application/json",
   "Prefer": "return=representation"
 };
+
 
 
 let eventosCache = [];
