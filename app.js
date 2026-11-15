@@ -1,9 +1,11 @@
 // 🔐 SENHA DE ACESSO DO APP
 const SENHA_ACESSO = "1234";
 
-// 🟢 COLE AQUI A CHAVE DO SEU SUPABASE (Publishable key ou anon key)
-const SUPABASE_URL = "https://dpdvvwnybjoeyzqgdaru.supabase.co/rest/v1/";
-const SUPABASE_KEY = "sb_publishable_Bbu0Z3jm3USgVhkn8dFuTA_qoPgtoct";
+
+import { createClient } from '@supabase/supabase-js'
+const supabaseUrl = 'https://dpdvvwnybjoeyzqgdaru.supabase.co'
+const supabaseKey = process.env.SUPABASE_KEY
+const supabase = createClient(supabaseUrl, supabaseKey)
 
 const API_URL = `${SUPABASE_URL}/rest/v1/eventos`;
 const HEADERS = {
