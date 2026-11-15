@@ -511,7 +511,7 @@ function renderizarLista(eventosMes) {
       `⏳ *Saldo Restante:* ${formatarBRL(restante)}\n\n` +
       `_Agradecemos a preferência!_`;
 
-       const linkWhats = `https://wa.me{numLimpo}?text=${encodeURIComponent(mensagem)}`;
+       const linkWhats = `whatsapp://send?text=${textoCodificado${encodeURIComponent(mensagem)}`;
 
     return `
       <div class="event-item ${ev.status}">
