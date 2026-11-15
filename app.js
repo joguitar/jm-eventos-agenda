@@ -1,7 +1,5 @@
-
-
-import { initializeApp } from "https://gstatic.com";
-import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, query, orderBy } from "https://gstatic.com";
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
 
 
 // 🔐 DEFINA SUA SENHA DE ACESSO AQUI
