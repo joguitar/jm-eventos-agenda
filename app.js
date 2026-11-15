@@ -1,11 +1,7 @@
-import { initializeApp } from "jm-eventos-agenda.vercel.app";
-import { getAnalytics } from "jm-eventos-agenda.vercel.app";
-
-
 // 🔐 DEFINA SUA SENHA DE ACESSO AQUI
 const SENHA_ACESSO = "1234";
 
-// ⚠️ COLE AQUI AS CREDENCIAIS DO SEU PROJETO FIREBASE
+// ⚠️ COLE AQUI AS CREDENCIAIS REAIS DO SEU PROJETO FIREBASE
 const firebaseConfig = {
   apiKey: "AIzaSyAeMUCVEsDW9bocBxBqkVv2UEUyr5aPlhU",
   authDomain: "jm-eventos.firebaseapp.com",
@@ -15,12 +11,6 @@ const firebaseConfig = {
   appId: "1:1013643921839:web:159ac653bd7aa19883c75a",
   measurementId: "G-6RGCNV8EX4"
 };
-
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const eventosRef = collection(db, "eventos");
-
-let eventosCache = [];
 
 // ==========================================
 // 1. AUTENTICAÇÃO E TRAVA DE TELA
@@ -54,7 +44,36 @@ document.getElementById("btn-sair").addEventListener("click", () => {
 });
 
 // ==========================================
-// 2. INICIALIZAÇÃO DE DATA E ABAS
+// 2. INICIALIZAÇÃO DO FIREBASE (MODO COMPAT)
+// ==========================================
+let db = null;
+let eventosRef = null;
+let eventosCache = [];
+
+try {
+  if (!firebase.apps.length) {
+    firebase.initializeApp(firebaseConfig);
+  }
+  db = firebase.firestore();
+  eventosRef = db.collection("eventos");
+
+  eventosRef.orderBy("data", "asc").onSnapshot((snapshot) => {
+    eventosCache = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+    document.getElementById("status-conexao").innerHTML = "● Sincronizado";
+    document.getElementById("status-conexao").style.color = "#10b981";
+    atualizarSistema();
+  }, (err) => {
+    document.getElementById("status-conexao").innerHTML = "● Erro Firebase";
+    document.getElementById("status-conexao").style.color = "#ef4444";
+    console.error(err);
+  });
+} catch (e) {
+  document.getElementById("status-conexao").innerHTML = "● Configure o Firebase";
+  document.getElementById("status-conexao").style.color = "#f59e0b";
+}
+
+// ==========================================
+// 3. DATA ATUAL E ABAS
 // ==========================================
 const filtroMes = document.getElementById("filtro-mes");
 const hoje = new Date();
@@ -72,22 +91,15 @@ document.querySelectorAll(".tab-btn").forEach(btn => {
 });
 
 // ==========================================
-// 3. SINCRONIZAÇÃO EM TEMPO REAL (FIREBASE)
-// ==========================================
-const q = query(eventosRef, orderBy("data", "asc"));
-onSnapshot(q, (snapshot) => {
-  eventosCache = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-  atualizarSistema();
-}, () => {
-  document.getElementById("status-conexao").innerHTML = "● Offline / Erro Config";
-  document.getElementById("status-conexao").style.color = "#ef4444";
-});
-
-// ==========================================
 // 4. SALVAR / EDITAR EVENTOS E TRAVA DE CONFLITO
 // ==========================================
 document.getElementById("form-evento").addEventListener("submit", async (e) => {
   e.preventDefault();
+  if (!eventosRef) {
+    alert("Configure as chaves do Firebase no arquivo app.js antes de salvar.");
+    return;
+  }
+
   const idEdicao = document.getElementById("evento-id").value;
   const dataEvento = document.getElementById("data").value;
   const turnoEvento = document.getElementById("turno").value;
@@ -124,9 +136,9 @@ document.getElementById("form-evento").addEventListener("submit", async (e) => {
 
   try {
     if (idEdicao) {
-      await updateDoc(doc(db, "eventos", idEdicao), dados);
+      await eventosRef.doc(idEdicao).update(dados);
     } else {
-      await addDoc(eventosRef, dados);
+      await eventosRef.add(dados);
     }
     fecharModal();
   } catch (err) {
@@ -141,10 +153,9 @@ function formatarBRL(val) {
 }
 
 function atualizarSistema() {
-  const mesSel = filtroMes.value; // "YYYY-MM"
+  const mesSel = filtroMes.value;
   const eventosMes = eventosCache.filter(ev => !mesSel || ev.data.startsWith(mesSel));
 
-  // Cálculos Financeiros do Mês
   let recebido = 0, aReceber = 0, despesas = 0;
   eventosMes.forEach(ev => {
     if (ev.status !== "cancelado") {
@@ -204,10 +215,10 @@ function renderizarLista(eventosMes) {
         </div>
 
         <div class="card-actions">
-          <button class="btn-act btn-whats" onclick="enviarComprovanteWhats('${ev.id}')">📲 Comprovante</button>
-          <button class="btn-act btn-pdf" onclick="gerarReciboPDF('${ev.id}')">📄 Recibo</button>
-          <button class="btn-act btn-edit" onclick="editarEvento('${ev.id}')">✏️ Editar</button>
-          <button class="btn-act btn-del" onclick="excluirEvento('${ev.id}')">🗑️</button>
+          <button type="button" class="btn-act btn-whats" onclick="enviarComprovanteWhats('${ev.id}')">📲 Comprovante</button>
+          <button type="button" class="btn-act btn-pdf" onclick="gerarReciboPDF('${ev.id}')">📄 Recibo</button>
+          <button type="button" class="btn-act btn-edit" onclick="editarEvento('${ev.id}')">✏️ Editar</button>
+          <button type="button" class="btn-act btn-del" onclick="excluirEvento('${ev.id}')">🗑️</button>
         </div>
       </div>
     `;
@@ -262,7 +273,7 @@ window.selecionarDiaCalendario = (dataISO, elemento) => {
     detalhe.innerHTML = `
       <div style="display:flex; justify-content:space-between; align-items:center;">
         <span>✅ Dia <b>${dataBR}</b> está livre!</span>
-        <button class="btn-act btn-whats" style="padding:8px 14px;" onclick="agendarNaData('${dataISO}')">+ Reservar Data</button>
+        <button type="button" class="btn-act btn-whats" style="padding:8px 14px;" onclick="agendarNaData('${dataISO}')">+ Reservar Data</button>
       </div>
     `;
   } else {
@@ -318,7 +329,7 @@ window.gerarReciboPDF = (id) => {
     <div style="border: 2px solid #000; padding: 24px; max-width: 700px; margin: 0 auto;">
       <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 12px; margin-bottom: 20px;">
         <h1 style="margin: 0; font-size: 24px;">JM EVENTOS</h1>
-        <p style="margin: 4px 0 0 0; font-size: 14px;">Comprovante de Locação e Reserva de Espaço • WhatsApp: (85) 98151-8244</p>
+        <p style="margin: 4px 0 0 0; font-size: 14px;">Comprovante de Locação e Reserva de Espaço</p>
       </div>
       <h2 style="font-size: 18px; margin-bottom: 12px;">RECIBO / FICHA DE RESERVA</h2>
       <p><strong>Cliente:</strong> ${ev.cliente}</p>
@@ -378,7 +389,7 @@ window.editarEvento = (id) => {
 
 window.excluirEvento = async (id) => {
   if (confirm("Deseja realmente excluir este evento da agenda?")) {
-    await deleteDoc(doc(db, "eventos", id));
+    await eventosRef.doc(id).delete();
   }
 };
 
@@ -393,3 +404,4 @@ filtroMes.addEventListener("change", atualizarSistema);
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/sw.js');
 }
+
