@@ -1,19 +1,18 @@
-// 🔐 DEFINA SUA SENHA DE ACESSO AQUI
+// 🔐 SENHA DE ACESSO DO APP
 const SENHA_ACESSO = "1234";
 
-// ⚠️ COLE AQUI AS CREDENCIAIS REAIS DO SEU PROJETO FIREBASE
+// 🔥 SUAS CHAVES DO PROJETO JM-EVENTOS
 const firebaseConfig = {
-  apiKey: "AIzaSyAeMUCVEsDW9bocBxBqkVv2UEUyr5aPlhU",
-  authDomain: "jm-eventos.firebaseapp.com",
+  apiKey: "AIzaSyAeNCVESoN9bocExBqKVv2UEUyr5aP1NU",
+  authDomain: "://firebaseapp.com",
   projectId: "jm-eventos",
   storageBucket: "jm-eventos.firebasestorage.app",
-  messagingSenderId: "1013643921839",
-  appId: "1:1013643921839:web:159ac653bd7aa19883c75a",
-  measurementId: "G-6RGCNV8EX4"
+  messagingSenderId: "1015643921859",
+  appId: "1:1015643921859:web:159ecb5dad7ae19885c75d"
 };
 
 // ==========================================
-// 1. AUTENTICAÇÃO E TRAVA DE TELA
+// 1. TELA DE SENHA E BLOQUEIO
 // ==========================================
 const telaLogin = document.getElementById("tela-login");
 const inputSenha = document.getElementById("input-senha");
@@ -44,36 +43,57 @@ document.getElementById("btn-sair").addEventListener("click", () => {
 });
 
 // ==========================================
-// 2. INICIALIZAÇÃO DO FIREBASE (MODO COMPAT)
+// 2. CARREGAMENTO AUTOMÁTICO DO FIREBASE
 // ==========================================
 let db = null;
 let eventosRef = null;
 let eventosCache = [];
 
-try {
-  if (!firebase.apps.length) {
-    firebase.initializeApp(firebaseConfig);
-  }
-  db = firebase.firestore();
-  eventosRef = db.collection("eventos");
-
-  eventosRef.orderBy("data", "asc").onSnapshot((snapshot) => {
-    eventosCache = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-    document.getElementById("status-conexao").innerHTML = "● Sincronizado";
-    document.getElementById("status-conexao").style.color = "#10b981";
-    atualizarSistema();
-  }, (err) => {
-    document.getElementById("status-conexao").innerHTML = "● Erro Firebase";
-    document.getElementById("status-conexao").style.color = "#ef4444";
-    console.error(err);
+function carregarScript(url) {
+  return new Promise((resolve, reject) => {
+    const s = document.createElement("script");
+    s.src = url;
+    s.onload = resolve;
+    s.onerror = reject;
+    document.head.appendChild(s);
   });
-} catch (e) {
-  document.getElementById("status-conexao").innerHTML = "● Configure o Firebase";
-  document.getElementById("status-conexao").style.color = "#f59e0b";
 }
 
+async function iniciarFirebase() {
+  const statusEl = document.getElementById("status-conexao");
+  try {
+    if (typeof firebase === "undefined") {
+      await carregarScript("https://gstatic.com");
+      await carregarScript("https://gstatic.com");
+    }
+
+    if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+    }
+
+    db = firebase.firestore();
+    eventosRef = db.collection("eventos");
+
+    eventosRef.orderBy("data", "asc").onSnapshot((snapshot) => {
+      eventosCache = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      statusEl.innerHTML = "● Sincronizado";
+      statusEl.style.color = "#10b981";
+      atualizarSistema();
+    }, (err) => {
+      statusEl.innerHTML = "● Erro Permissão";
+      statusEl.style.color = "#ef4444";
+      alert("Erro no Firestore: " + err.message);
+    });
+  } catch (err) {
+    statusEl.innerHTML = "● Falha Conexão";
+    statusEl.style.color = "#ef4444";
+    console.error("Erro ao iniciar Firebase:", err);
+  }
+}
+
+iniciarFirebase();
 // ==========================================
-// 3. DATA ATUAL E ABAS
+// 3. DATA ATUAL, ABAS E SALVAMENTO
 // ==========================================
 const filtroMes = document.getElementById("filtro-mes");
 const hoje = new Date();
@@ -90,13 +110,10 @@ document.querySelectorAll(".tab-btn").forEach(btn => {
   });
 });
 
-// ==========================================
-// 4. SALVAR / EDITAR EVENTOS E TRAVA DE CONFLITO
-// ==========================================
 document.getElementById("form-evento").addEventListener("submit", async (e) => {
   e.preventDefault();
   if (!eventosRef) {
-    alert("Configure as chaves do Firebase no arquivo app.js antes de salvar.");
+    alert("Aguarde a conexão com o Firebase ou verifique sua internet.");
     return;
   }
 
@@ -142,11 +159,12 @@ document.getElementById("form-evento").addEventListener("submit", async (e) => {
     }
     fecharModal();
   } catch (err) {
-    alert("Erro ao salvar na nuvem: " + err.message);
+    alert("Erro ao salvar no banco: " + err.message);
   }
 });
+
 // ==========================================
-// 5. ATUALIZAÇÃO GERAL (FINANCEIRO, LISTA E CALENDÁRIO)
+// 4. FINANCEIRO E LISTA DE EVENTOS
 // ==========================================
 function formatarBRL(val) {
   return (val || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -165,12 +183,11 @@ function atualizarSistema() {
       despesas += ev.despesas || 0;
     }
   });
-  const lucro = recebido - despesas;
 
   document.getElementById("res-recebido").innerText = formatarBRL(recebido);
   document.getElementById("res-receber").innerText = formatarBRL(aReceber);
   document.getElementById("res-despesas").innerText = formatarBRL(despesas);
-  document.getElementById("res-lucro").innerText = formatarBRL(lucro);
+  document.getElementById("res-lucro").innerText = formatarBRL(recebido - despesas);
 
   renderizarLista(eventosMes);
   renderizarCalendario(mesSel, eventosMes);
@@ -224,9 +241,8 @@ function renderizarLista(eventosMes) {
     `;
   }).join("");
 }
-
 // ==========================================
-// 6. CALENDÁRIO VISUAL INTERATIVO
+// 5. CALENDÁRIO VISUAL INTERATIVO
 // ==========================================
 function renderizarCalendario(mesSel, eventosMes) {
   const grid = document.getElementById("cal-grid");
@@ -243,28 +259,22 @@ function renderizarCalendario(mesSel, eventosMes) {
   const totalDiasMes = new Date(ano, mes, 0).getDate();
 
   let html = "";
-  for (let i = 0; i < primeiroDiaSemana; i++) {
-    html += `<div class="cal-day empty"></div>`;
-  }
+  for (let i = 0; i < primeiroDiaSemana; i++) html += `<div class="cal-day empty"></div>`;
 
   for (let dia = 1; dia <= totalDiasMes; dia++) {
     const dataISO = `${ano}-${String(mes).padStart(2, "0")}-${String(dia).padStart(2, "0")}`;
     const evsDia = eventosMes.filter(e => e.data === dataISO && e.status !== "cancelado");
-    
     let classeStatus = "";
     if (evsDia.some(e => e.status === "confirmado" || e.status === "concluido")) classeStatus = "has-confirmado";
     else if (evsDia.some(e => e.status === "orcamento")) classeStatus = "has-orcamento";
-
     html += `<div class="cal-day ${classeStatus}" onclick="selecionarDiaCalendario('${dataISO}', this)">${dia}</div>`;
   }
-
   grid.innerHTML = html;
 }
 
 window.selecionarDiaCalendario = (dataISO, elemento) => {
   document.querySelectorAll(".cal-day").forEach(d => d.classList.remove("selected"));
   elemento.classList.add("selected");
-
   const dataBR = dataISO.split("-").reverse().join("/");
   const evsDia = eventosCache.filter(e => e.data === dataISO && e.status !== "cancelado");
   const detalhe = document.getElementById("cal-detalhe-dia");
@@ -274,15 +284,13 @@ window.selecionarDiaCalendario = (dataISO, elemento) => {
       <div style="display:flex; justify-content:space-between; align-items:center;">
         <span>✅ Dia <b>${dataBR}</b> está livre!</span>
         <button type="button" class="btn-act btn-whats" style="padding:8px 14px;" onclick="agendarNaData('${dataISO}')">+ Reservar Data</button>
-      </div>
-    `;
+      </div>`;
   } else {
     detalhe.innerHTML = evsDia.map(ev => `
       <div style="margin-bottom:8px;">
         <strong style="color:var(--gold)">📅 ${dataBR} (${ev.turno})</strong><br>
         Cliente: <b>${ev.cliente}</b> — ${ev.tipo} (${ev.status.toUpperCase()})
-      </div>
-    `).join("");
+      </div>`).join("");
   }
 };
 
@@ -290,42 +298,29 @@ window.agendarNaData = (dataISO) => {
   abrirModal();
   document.getElementById("data").value = dataISO;
 };
+
 // ==========================================
-// 7. COMPROVANTE WHATSAPP E RECIBO PDF
+// 6. WHATSAPP, RECIBO PDF E MODAL
 // ==========================================
 window.enviarComprovanteWhats = (id) => {
   const ev = eventosCache.find(item => item.id === id);
   if (!ev) return;
-
   const dataBR = ev.data.split("-").reverse().join("/");
   const restante = Math.max(0, (ev.valorTotal || 0) - (ev.valorPago || 0));
   const numLimpo = ev.telefone.replace(/\D/g, "");
-
   const mensagem = `*JM EVENTOS - COMPROVANTE DE RESERVA* ✨\n\n` +
-    `👤 *Cliente:* ${ev.cliente}\n` +
-    `🎉 *Evento:* ${ev.tipo}\n` +
-    `📅 *Data:* ${dataBR}\n` +
-    `⏰ *Turno:* ${ev.turno}\n` +
-    `📌 *Status:* ${ev.status.toUpperCase()}\n\n` +
-    `💰 *Valor Total:* ${formatarBRL(ev.valorTotal)}\n` +
-    `✅ *Valor Pago (Sinal):* ${formatarBRL(ev.valorPago)}\n` +
-    `⏳ *Saldo Restante:* ${formatarBRL(restante)}\n\n` +
-    (ev.obs ? `📝 *Observações:* ${ev.obs}\n\n` : ``) +
-    `_Agradecemos a preferência! Qualquer dúvida estamos à disposição._`;
-
-  const url = `https://wa.me{numLimpo}?text=${encodeURIComponent(mensagem)}`;
-  window.open(url, "_blank");
+    `👤 *Cliente:* ${ev.cliente}\n🎉 *Evento:* ${ev.tipo}\n📅 *Data:* ${dataBR}\n⏰ *Turno:* ${ev.turno}\n📌 *Status:* ${ev.status.toUpperCase()}\n\n` +
+    `💰 *Valor Total:* ${formatarBRL(ev.valorTotal)}\n✅ *Valor Pago (Sinal):* ${formatarBRL(ev.valorPago)}\n⏳ *Saldo Restante:* ${formatarBRL(restante)}\n\n` +
+    (ev.obs ? `📝 *Observações:* ${ev.obs}\n\n` : ``) + `_Agradecemos a preferência!_`;
+  window.open(`https://wa.me{numLimpo}?text=${encodeURIComponent(mensagem)}`, "_blank");
 };
 
 window.gerarReciboPDF = (id) => {
   const ev = eventosCache.find(item => item.id === id);
   if (!ev) return;
-
   const dataBR = ev.data.split("-").reverse().join("/");
   const restante = Math.max(0, (ev.valorTotal || 0) - (ev.valorPago || 0));
-  const areaRecibo = document.getElementById("area-recibo");
-
-  areaRecibo.innerHTML = `
+  document.getElementById("area-recibo").innerHTML = `
     <div style="border: 2px solid #000; padding: 24px; max-width: 700px; margin: 0 auto;">
       <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 12px; margin-bottom: 20px;">
         <h1 style="margin: 0; font-size: 24px;">JM EVENTOS</h1>
@@ -346,15 +341,10 @@ window.gerarReciboPDF = (id) => {
         <div style="width: 45%; border-top: 1px solid #000; padding-top: 6px;">JM Eventos (Locador)</div>
         <div style="width: 45%; border-top: 1px solid #000; padding-top: 6px;">${ev.cliente} (Locatário)</div>
       </div>
-    </div>
-  `;
-
+    </div>`;
   window.print();
 };
 
-// ==========================================
-// 8. CONTROLES DO MODAL E EVENTOS
-// ==========================================
 function abrirModal() {
   document.getElementById("form-evento").reset();
   document.getElementById("evento-id").value = "";
@@ -382,7 +372,6 @@ window.editarEvento = (id) => {
   document.getElementById("despesas").value = ev.despesas || 0;
   document.getElementById("pagamento").value = ev.pagamento || "PIX";
   document.getElementById("obs").value = ev.obs || "";
-
   document.getElementById("modal-titulo").innerText = "Editar Agendamento";
   document.getElementById("modal-form").classList.add("active");
 };
@@ -400,8 +389,8 @@ document.getElementById("busca").addEventListener("input", atualizarSistema);
 document.getElementById("filtro-status").addEventListener("change", atualizarSistema);
 filtroMes.addEventListener("change", atualizarSistema);
 
-// Registro do PWA no Android
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/sw.js');
 }
+
 
