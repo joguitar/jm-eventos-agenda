@@ -1,5 +1,5 @@
-import { initializeApp } from "firebase/app";
-import { getAnalytics } from "firebase/analytics";
+import { initializeApp } from "jm-eventos-agenda.vercel.app";
+import { getAnalytics } from "jm-eventos-agenda.vercel.app";
 
 
 // 🔐 DEFINA SUA SENHA DE ACESSO AQUI
