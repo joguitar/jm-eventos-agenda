@@ -79,7 +79,7 @@
     <p class="msg-vazia">Carregando agenda na nuvem...</p>
   </div>
 
-    <div id="view-calendario" class="calendar-wrapper" style="display: none;">
+  <div id="view-calendario" class="calendar-wrapper" style="display: none;">
     <div class="cal-nav">
       <button type="button" id="btn-mes-ant" class="btn-cal-nav">◀</button>
       <input type="month" id="cal-mes-picker" class="month-picker">
@@ -96,7 +96,6 @@
     <div id="cal-grid" class="cal-grid"></div>
     <div id="cal-detalhe-dia" class="cal-day-detail"></div>
   </div>
-
 
   <div id="view-clientes" style="display: none;">
     <form id="form-cliente" class="finance-dashboard" style="margin-bottom: 16px;">
@@ -179,17 +178,22 @@
       </div>
       <div class="form-row">
         <div class="form-col">
-          <label>Data do Evento *</label>
+          <label>Data Início *</label>
           <input type="date" id="data" required>
         </div>
         <div class="form-col">
-          <label>Turno / Horário *</label>
-          <select id="turno">
-            <option value="Integral (Dia Todo)">Integral (Dia Todo)</option>
-            <option value="Manhã / Tarde">Manhã / Tarde</option>
-            <option value="Noite">Noite</option>
-          </select>
+          <label>Data Fim (Opcional)</label>
+          <input type="date" id="dataFim">
         </div>
+      </div>
+
+      <div class="form-group">
+        <label>Turno / Horário *</label>
+        <select id="turno">
+          <option value="Integral (Dia Todo)">Integral (Dia Todo)</option>
+          <option value="Manhã / Tarde">Manhã / Tarde</option>
+          <option value="Noite">Noite</option>
+        </select>
       </div>
 
       <div class="form-section-title">2. Financeiro e Custos do Evento</div>
@@ -236,6 +240,7 @@
 <script src="/app.js"></script>
 </body>
 </html>
+
 
 
 
