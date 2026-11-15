@@ -2,10 +2,8 @@
 const SENHA_ACESSO = "1234";
 
 
-import { createClient } from '@supabase/supabase-js'
-const supabaseUrl = 'https://dpdvvwnybjoeyzqgdaru.supabase.co'
-const supabaseKey = process.env.SUPABASE_KEY
-const supabase = createClient(supabaseUrl, supabaseKey)
+const SUPABASE_URL = "https://supabase.co";
+const SUPABASE_KEY = "sb_publishable_Bbu0Z3jm3USgVhkn8dFuTA_qoPgtoct";
 
 const API_URL = `${SUPABASE_URL}/rest/v1/eventos`;
 const HEADERS = {
