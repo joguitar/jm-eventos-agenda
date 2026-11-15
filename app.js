@@ -1,15 +1,12 @@
 // 🔐 SENHA DE ACESSO DO APP
 const SENHA_ACESSO = "1234";
 
-// 🔥 SUAS CHAVES DO PROJETO JM-EVENTOS
-const firebaseConfig = {
-  apiKey: "AIzaSyAeNCVESoN9bocExBqKVv2UEUyr5aP1NU",
-  authDomain: "://firebaseapp.com",
-  projectId: "jm-eventos",
-  storageBucket: "jm-eventos.firebasestorage.app",
-  messagingSenderId: "1015643921859",
-  appId: "1:1015643921859:web:159ecb5dad7ae19885c75d"
-};
+// 🔥 CONFIGURAÇÃO DIRETA DO PROJETO JM-EVENTOS
+const PROJECT_ID = "jm-eventos";
+const API_KEY = "AIzaSyAeNCVESoN9bocExBqKVv2UEUyr5aP1NU";
+const FIRESTORE_URL = `https://googleapis.com{PROJECT_ID}/databases/(default)/documents/eventos?key=${API_KEY}`;
+
+let eventosCache = [];
 
 // ==========================================
 // 1. TELA DE SENHA E BLOQUEIO
@@ -43,56 +40,72 @@ document.getElementById("btn-sair").addEventListener("click", () => {
 });
 
 // ==========================================
-// 2. CARREGAMENTO AUTOMÁTICO DO FIREBASE
+// 2. CONVERSOR E CARREGAMENTO DA NUVEM
 // ==========================================
-let db = null;
-let eventosRef = null;
-let eventosCache = [];
-
-function carregarScript(url) {
-  return new Promise((resolve, reject) => {
-    const s = document.createElement("script");
-    s.src = url;
-    s.onload = resolve;
-    s.onerror = reject;
-    document.head.appendChild(s);
-  });
+function paraFirestore(obj) {
+  return {
+    fields: {
+      cliente: { stringValue: String(obj.cliente || "") },
+      telefone: { stringValue: String(obj.telefone || "") },
+      convidados: { integerValue: String(parseInt(obj.convidados) || 0) },
+      tipo: { stringValue: String(obj.tipo || "") },
+      status: { stringValue: String(obj.status || "orcamento") },
+      data: { stringValue: String(obj.data || "") },
+      turno: { stringValue: String(obj.turno || "") },
+      valorTotal: { doubleValue: Number(obj.valorTotal) || 0 },
+      valorPago: { doubleValue: Number(obj.valorPago) || 0 },
+      despesas: { doubleValue: Number(obj.despesas) || 0 },
+      pagamento: { stringValue: String(obj.pagamento || "PIX") },
+      obs: { stringValue: String(obj.obs || "") }
+    }
+  };
 }
 
-async function iniciarFirebase() {
+function deFirestore(doc) {
+  const f = doc.fields || {};
+  const id = doc.name.split("/").pop();
+  return {
+    id,
+    cliente: f.cliente?.stringValue || "",
+    telefone: f.telefone?.stringValue || "",
+    convidados: Number(f.convidados?.integerValue || 0),
+    tipo: f.tipo?.stringValue || "",
+    status: f.status?.stringValue || "orcamento",
+    data: f.data?.stringValue || "",
+    turno: f.turno?.stringValue || "",
+    valorTotal: Number(f.valorTotal?.doubleValue ?? f.valorTotal?.integerValue ?? 0),
+    valorPago: Number(f.valorPago?.doubleValue ?? f.valorPago?.integerValue ?? 0),
+    despesas: Number(f.despesas?.doubleValue ?? f.despesas?.integerValue ?? 0),
+    pagamento: f.pagamento?.stringValue || "PIX",
+    obs: f.obs?.stringValue || ""
+  };
+}
+
+async function carregarEventos() {
   const statusEl = document.getElementById("status-conexao");
   try {
-    if (typeof firebase === "undefined") {
-      await carregarScript("https://gstatic.com");
-      await carregarScript("https://gstatic.com");
+    const res = await fetch(`${FIRESTORE_URL}&pageSize=500`);
+    const json = await res.json();
+
+    if (json.error) {
+      throw new Error(json.error.message);
     }
 
-    if (!firebase.apps.length) {
-      firebase.initializeApp(firebaseConfig);
-    }
+    eventosCache = (json.documents || []).map(deFirestore);
+    eventosCache.sort((a, b) => a.data.localeCompare(b.data));
 
-    db = firebase.firestore();
-    eventosRef = db.collection("eventos");
-
-    eventosRef.orderBy("data", "asc").onSnapshot((snapshot) => {
-      eventosCache = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-      statusEl.innerHTML = "● Sincronizado";
-      statusEl.style.color = "#10b981";
-      atualizarSistema();
-    }, (err) => {
-      statusEl.innerHTML = "● Erro Permissão";
-      statusEl.style.color = "#ef4444";
-      alert("Erro no Firestore: " + err.message);
-    });
+    statusEl.innerHTML = "● Sincronizado";
+    statusEl.style.color = "#10b981";
+    atualizarSistema();
   } catch (err) {
-    statusEl.innerHTML = "● Falha Conexão";
+    statusEl.innerHTML = "● Erro Banco";
     statusEl.style.color = "#ef4444";
-    alert("Detalhe do erro ao carregar Firebase: " + (err.message || "Bloqueio de rede/script"));
+    console.error("Erro Firestore:", err);
   }
 }
 
-
-iniciarFirebase();
+carregarEventos();
+setInterval(carregarEventos, 15000);
 // ==========================================
 // 3. DATA ATUAL, ABAS E SALVAMENTO
 // ==========================================
@@ -113,10 +126,9 @@ document.querySelectorAll(".tab-btn").forEach(btn => {
 
 document.getElementById("form-evento").addEventListener("submit", async (e) => {
   e.preventDefault();
-  if (!eventosRef) {
-    alert("Aguarde a conexão com o Firebase ou verifique sua internet.");
-    return;
-  }
+  const btnSalvar = document.getElementById("btn-salvar");
+  btnSalvar.disabled = true;
+  btnSalvar.innerText = "⏳ Salvando...";
 
   const idEdicao = document.getElementById("evento-id").value;
   const dataEvento = document.getElementById("data").value;
@@ -133,6 +145,8 @@ document.getElementById("form-evento").addEventListener("submit", async (e) => {
 
     if (conflito) {
       alert(`⚠️ CONFLITO DE AGENDA!\nA data ${dataEvento.split("-").reverse().join("/")} já possui reserva (${conflito.cliente} - ${conflito.turno}).`);
+      btnSalvar.disabled = false;
+      btnSalvar.innerText = "💾 Salvar na Nuvem";
       return;
     }
   }
@@ -153,14 +167,30 @@ document.getElementById("form-evento").addEventListener("submit", async (e) => {
   };
 
   try {
+    let url = FIRESTORE_URL;
+    let method = "POST";
+
     if (idEdicao) {
-      await eventosRef.doc(idEdicao).update(dados);
-    } else {
-      await eventosRef.add(dados);
+      url = `https://googleapis.com{PROJECT_ID}/databases/(default)/documents/eventos/${idEdicao}?key=${API_KEY}`;
+      method = "PATCH";
     }
+
+    const res = await fetch(url, {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(paraFirestore(dados))
+    });
+
+    const json = await res.json();
+    if (json.error) throw new Error(json.error.message);
+
     fecharModal();
+    await carregarEventos();
   } catch (err) {
-    alert("Erro ao salvar no banco: " + err.message);
+    alert("Erro ao salvar na nuvem: " + err.message);
+  } finally {
+    btnSalvar.disabled = false;
+    btnSalvar.innerText = "💾 Salvar na Nuvem";
   }
 });
 
@@ -379,7 +409,13 @@ window.editarEvento = (id) => {
 
 window.excluirEvento = async (id) => {
   if (confirm("Deseja realmente excluir este evento da agenda?")) {
-    await eventosRef.doc(id).delete();
+    try {
+      const url = `https://googleapis.com{PROJECT_ID}/databases/(default)/documents/eventos/${id}?key=${API_KEY}`;
+      await fetch(url, { method: "DELETE" });
+      await carregarEventos();
+    } catch (err) {
+      alert("Erro ao excluir: " + err.message);
+    }
   }
 };
 
@@ -393,5 +429,6 @@ filtroMes.addEventListener("change", atualizarSistema);
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/sw.js');
 }
+
 
 
