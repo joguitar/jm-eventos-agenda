@@ -7,6 +7,7 @@ const SUPABASE_KEY = "sb_publishable_Bbu0Z3jm3USgVhkn8dFuTA_qoPgtoct";
 
 const API_URL = `${SUPABASE_URL}/rest/v1/eventos`;
 const CLIENTES_URL = `${SUPABASE_URL}/rest/v1/clientes`;
+const CONFIG_URL = `${SUPABASE_URL}/rest/v1/config`;
 
 const HEADERS = {
   "apikey": SUPABASE_KEY,
@@ -14,8 +15,7 @@ const HEADERS = {
   "Prefer": "return=representation"
 };
 
-// 📝 TEXTO PADRÃO DAS OBSERVAÇÕES DO ESPAÇO
-const TEXTO_PADRAO_OBS = `INFORMAÇÕES SOBRE ESPAÇO DE LAZER (JM EVENTOS)
+let regrasGeraisCache = `INFORMAÇÕES SOBRE ESPAÇO DE LAZER (JM EVENTOS)
 🚨⚠️⚠️⚠️⚠️⚠️⚠️⚠️
 Obs: Se deixar o espaço sujo é cobrado uma taxa de limpeza no valor de R$ 50,00 reais.
 
@@ -113,7 +113,7 @@ document.getElementById("btn-sair").addEventListener("click", () => {
   telaLogin.style.display = "flex";
 });
 // ==========================================
-// 3. SINCRONIZAÇÃO COM SUPABASE E FUNÇÕES DE DATA
+// 3. SINCRONIZAÇÃO COM SUPABASE (EVENTOS, CLIENTES E REGRAS)
 // ==========================================
 function formatarPeriodoBR(ev) {
   const ini = ev.data.split("-").reverse().join("/");
@@ -182,6 +182,44 @@ async function carregarClientes() {
   }
 }
 
+async function carregarRegras() {
+  try {
+    const res = await fetch(`${CONFIG_URL}?id=eq.1&select=*`, { headers: HEADERS });
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data && data.length > 0 && data.regras_recibo) {
+      regrasGeraisCache = data.regras_recibo;
+    }
+    document.getElementById("texto-regras-gerais").value = regrasGeraisCache;
+  } catch (err) {
+    document.getElementById("texto-regras-gerais").value = regrasGeraisCache;
+  }
+}
+
+document.getElementById("form-regras").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const btn = document.getElementById("btn-salvar-regras");
+  btn.disabled = true;
+  btn.innerText = "⏳ Salvando Regras...";
+  const novoTexto = document.getElementById("texto-regras-gerais").value.trim();
+
+  try {
+    const res = await fetch(`${CONFIG_URL}?id=eq.1`, {
+      method: "PATCH",
+      headers: HEADERS,
+      body: JSON.stringify({ regras_recibo: novoTexto })
+    });
+    if (!res.ok) throw new Error(await res.text());
+    regrasGeraisCache = novoTexto;
+    alert("✅ Regras do espaço atualizadas! Todos os próximos recibos e comprovantes usarão este texto.");
+  } catch (err) {
+    alert("Erro ao salvar regras (verifique se criou a tabela 'config' no Supabase): " + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerText = "💾 Salvar Regras na Nuvem";
+  }
+});
+
 // ==========================================
 // 4. CONTROLE DE MÊS SINCRONIZADO E ABAS
 // ==========================================
@@ -223,11 +261,13 @@ document.querySelectorAll(".tab-btn").forEach(btn => {
     document.getElementById("box-filtros").style.display = view === "lista" ? "flex" : "none";
     document.getElementById("view-calendario").style.display = view === "calendario" ? "block" : "none";
     document.getElementById("view-clientes").style.display = view === "clientes" ? "block" : "none";
+    document.getElementById("view-regras").style.display = view === "regras" ? "block" : "none";
   });
 });
 
 carregarEventos();
 carregarClientes();
+carregarRegras();
 setInterval(() => {
   carregarEventos();
   carregarClientes();
@@ -312,7 +352,7 @@ window.excluirCliente = async (id) => {
 
 document.getElementById("busca-cliente").addEventListener("input", renderizarClientes);
 // ==========================================
-// 6. SALVAR E EDITAR EVENTOS (COM PERÍODO DE DIAS)
+// 6. SALVAR E EDITAR EVENTOS
 // ==========================================
 document.getElementById("form-evento").addEventListener("submit", async (e) => {
   e.preventDefault();
@@ -477,7 +517,7 @@ function renderizarLista(eventosMes) {
   }).join("");
 }
 // ==========================================
-// 8. CALENDÁRIO VISUAL (MULTI-DIAS), WHATSAPP, PDF E MODAL
+// 8. CALENDÁRIO, WHATSAPP, RECIBO PDF COM REGRAS GERAIS E MODAL
 // ==========================================
 function renderizarCalendario(mesSel, todosEventos) {
   const grid = document.getElementById("cal-grid");
@@ -545,7 +585,9 @@ window.enviarComprovanteWhats = (id) => {
   const mensagem = `*JM EVENTOS - COMPROVANTE DE RESERVA* ✨\n\n` +
     `👤 *Cliente:* ${ev.cliente}\n🎉 *Evento:* ${ev.tipo}\n📅 *Período:* ${periodoBR}\n⏰ *Turno:* ${ev.turno}\n📌 *Status:* ${ev.status.toUpperCase()}\n\n` +
     `💰 *Valor Total:* ${formatarBRL(ev.valorTotal)}\n✅ *Valor Pago (Sinal):* ${formatarBRL(ev.valorPago)}\n⏳ *Saldo Restante:* ${formatarBRL(restante)}\n\n` +
-    (ev.obs ? `📝 *Regras e Observações:*\n${ev.obs}\n\n` : ``) + `_Agradecemos a preferência!_`;
+    (ev.obs ? `📝 *Observação do Evento:* ${ev.obs}\n\n` : ``) +
+    (regrasGeraisCache ? `${regrasGeraisCache}\n\n` : ``) +
+    `_Agradecemos a preferência!_`;
   window.open(`https://wa.me{numLimpo}?text=${encodeURIComponent(mensagem)}`, "_blank");
 };
 
@@ -559,7 +601,7 @@ window.gerarReciboPDF = (id) => {
   areaRecibo.innerHTML = `
     <div style="border: 2px solid #000; padding: 24px; max-width: 700px; margin: 0 auto; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
       <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 14px; margin-bottom: 20px;">
-        <img id="logo-recibo-img" src="/icon.png" alt="JM Eventos" style="width: 110px; height: 110px; border-radius: 50%; object-fit: contain; background-color: #000000; border: 2px solid #d4af37; margin-bottom: 8px;">
+        <img id="logo-recibo-img" src="/icon.png" alt="JM Eventos" style="height: 95px; width: auto; object-fit: contain; margin-bottom: 8px;">
         <h1 style="margin: 0; font-size: 24px; letter-spacing: 1px;">JM EVENTOS</h1>
         <p style="margin: 4px 0 0 0; font-size: 14px;">Comprovante de Locação e Reserva de Espaço</p>
       </div>
@@ -573,8 +615,9 @@ window.gerarReciboPDF = (id) => {
       <p><strong>Valor Total Acordado:</strong> ${formatarBRL(ev.valorTotal)}</p>
       <p><strong>Valor Recebido (Sinal):</strong> ${formatarBRL(ev.valorPago)} (${ev.pagamento || 'PIX'})</p>
       <p><strong>Saldo Restante a Pagar:</strong> ${formatarBRL(restante)}</p>
-      ${ev.obs ? `<div style="white-space: pre-line; margin-top: 12px; padding: 10px; border: 1px solid #ccc;"><strong>Regras e Observações:</strong><br>${ev.obs}</div>` : ''}
-      <div style="margin-top: 50px; display: flex; justify-content: space-between; text-align: center;">
+      ${ev.obs ? `<p><strong>Observações do Evento:</strong> ${ev.obs}</p>` : ''}
+      ${regrasGeraisCache ? `<div style="white-space: pre-line; margin-top: 14px; padding: 12px; border: 1px solid #000; background-color: #f9f9f9; font-size: 13px;">${regrasGeraisCache}</div>` : ''}
+      <div style="margin-top: 45px; display: flex; justify-content: space-between; text-align: center;">
         <div style="width: 45%; border-top: 1px solid #000; padding-top: 6px;">JM Eventos (Locador)</div>
         <div style="width: 45%; border-top: 1px solid #000; padding-top: 6px;">${ev.cliente} (Locatário)</div>
       </div>
@@ -589,8 +632,6 @@ window.gerarReciboPDF = (id) => {
   }
 };
 
-
-
 function abrirModal() {
   document.getElementById("form-evento").reset();
   document.getElementById("evento-id").value = "";
@@ -598,7 +639,6 @@ function abrirModal() {
   document.getElementById("valorTotal").value = "R$ 0,00";
   document.getElementById("valorPago").value = "R$ 0,00";
   document.getElementById("despesas").value = "R$ 0,00";
-  document.getElementById("obs").value = TEXTO_PADRAO_OBS;
   document.getElementById("modal-titulo").innerText = "Novo Agendamento";
   document.getElementById("modal-form").classList.add("active");
 }
@@ -649,6 +689,7 @@ document.getElementById("filtro-status").addEventListener("change", atualizarSis
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("/sw.js");
 }
+
 
 
 
