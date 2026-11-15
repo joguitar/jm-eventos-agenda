@@ -1,10 +1,10 @@
 // 🔐 SENHA DE ACESSO DO APP
 const SENHA_ACESSO = "1234";
 
-// 🔥 CONFIGURAÇÃO DIRETA DO PROJETO JM-EVENTOS
-const PROJECT_ID = "jm-eventos";
-const API_KEY = "AIzaSyAeNCVESoN9bocExBqKVv2UEUyr5aP1NU";
-const FIRESTORE_URL = `https://googleapis.com{PROJECT_ID}/databases/(default)/documents/eventos?key=${API_KEY}`;
+// 🟢 COLE AQUI A URL E A CHAVE ANON PUBLIC DO SEU SUPABASE
+const SUPABASE_URL = "https://dpdvvwnybjoeyzqgdaru.supabase.co/rest/v1/";
+const SUPABASE_KEY = "sb_publishable_Bbu0Z3jm3USgVhkn8dFuTA_qoPgtoct";
+
 
 let eventosCache = [];
 
