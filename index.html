@@ -36,8 +36,11 @@
 <main class="container no-print">
   <section class="finance-dashboard">
     <div class="finance-top">
-      <span>📊 Balanço do Mês</span>
-      <input type="month" id="filtro-mes" class="month-picker">
+      <span>📊 Balanço</span>
+      <div style="display:flex; gap:6px; align-items:center;">
+        <input type="month" id="filtro-mes" class="month-picker">
+        <button type="button" id="btn-todos-meses" class="btn-cal-nav" style="padding:6px 10px; font-size:0.8rem;">Todos</button>
+      </div>
     </div>
     <div class="finance-grid">
       <div class="f-box">
