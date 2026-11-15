@@ -12,7 +12,6 @@
 </head>
 <body>
 
-<!-- TELA DE BLOQUEIO POR SENHA -->
 <div id="tela-login" class="login-overlay">
   <div class="login-box">
     <img src="/icon.png" alt="JM Eventos" class="login-logo">
@@ -24,7 +23,6 @@
   </div>
 </div>
 
-<!-- CABEÇALHO DO APP -->
 <header class="no-print">
   <div class="brand">
     <img src="/icon.png" alt="JM Eventos">
@@ -37,7 +35,6 @@
 </header>
 
 <main class="container no-print">
-  <!-- PAINEL FINANCEIRO MENSAL -->
   <section class="finance-dashboard">
     <div class="finance-top">
       <span>📊 Balanço do Mês</span>
@@ -63,13 +60,11 @@
     </div>
   </section>
 
-  <!-- ABAS DE VISUALIZAÇÃO (LISTA vs CALENDÁRIO) -->
   <div class="view-tabs">
     <button class="tab-btn active" data-view="lista">📋 Lista de Eventos</button>
     <button class="tab-btn" data-view="calendario">📅 Calendário Visual</button>
   </div>
 
-  <!-- FILTROS DE BUSCA -->
   <div class="filters" id="box-filtros">
     <input type="text" id="busca" placeholder="🔍 Buscar cliente, telefone ou evento...">
     <select id="filtro-status">
@@ -81,12 +76,10 @@
     </select>
   </div>
 
-  <!-- VISÃO 1: LISTA DE EVENTOS -->
   <div id="view-lista" class="event-list">
     <p class="msg-vazia">Carregando agenda na nuvem...</p>
   </div>
 
-  <!-- VISÃO 2: CALENDÁRIO MENSAL -->
   <div id="view-calendario" class="calendar-wrapper" style="display: none;">
     <div class="cal-legend">
       <span><i class="dot confirmado"></i> Confirmado</span>
@@ -101,10 +94,8 @@
   </div>
 </main>
 
-<!-- BOTÃO FLUTUANTE (+) -->
 <button class="fab no-print" id="btn-novo" title="Novo Agendamento">+</button>
 
-<!-- MODAL DE CADASTRO / EDIÇÃO COMPLETO -->
 <div class="modal no-print" id="modal-form">
   <div class="modal-content">
     <div class="modal-header">
@@ -209,10 +200,10 @@
   </div>
 </div>
 
-<!-- ÁREA OCULTA PARA IMPRESSÃO / RECIBO PDF -->
 <div id="area-recibo" class="print-only"></div>
 
 <script type="module" src="/app.js"></script>
 </body>
 </html>
+
 
