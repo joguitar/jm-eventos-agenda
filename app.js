@@ -1,16 +1,20 @@
 // 🔐 SENHA DE ACESSO DO APP
 const SENHA_ACESSO = "1234";
 
-// 🟢 COLE AQUI A URL E A CHAVE ANON PUBLIC DO SEU SUPABASE
-const SUPABASE_URL = "https://dpdvvwnybjoeyzqgdaru.supabase.co/rest/v1/";
-const SUPABASE_KEY = "sb_publishable_Bbu0Z3jm3USgVhkn8dFuTA_qoPgtoct";
+// 🟢 COLE AQUI A CHAVE DO SEU SUPABASE (Publishable key ou anon key)
+const SUPABASE_URL = "https://supabase.co";
+const SUPABASE_KEY = "COLE_SUA_CHAVE_AQUI";
 
+const API_URL = `${SUPABASE_URL}/rest/v1/eventos`;
+const HEADERS = {
+  "apikey": SUPABASE_KEY,
+  "Content-Type": "application/json",
+  "Prefer": "return=representation"
+};
 
 let eventosCache = [];
 
-// ==========================================
 // 1. TELA DE SENHA E BLOQUEIO
-// ==========================================
 const telaLogin = document.getElementById("tela-login");
 const inputSenha = document.getElementById("input-senha");
 const erroSenha = document.getElementById("erro-senha");
@@ -38,61 +42,23 @@ document.getElementById("btn-sair").addEventListener("click", () => {
   sessionStorage.removeItem("jm_auth");
   telaLogin.style.display = "flex";
 });
-
-// ==========================================
-// 2. CONVERSOR E CARREGAMENTO DA NUVEM
-// ==========================================
-function paraFirestore(obj) {
-  return {
-    fields: {
-      cliente: { stringValue: String(obj.cliente || "") },
-      telefone: { stringValue: String(obj.telefone || "") },
-      convidados: { integerValue: String(parseInt(obj.convidados) || 0) },
-      tipo: { stringValue: String(obj.tipo || "") },
-      status: { stringValue: String(obj.status || "orcamento") },
-      data: { stringValue: String(obj.data || "") },
-      turno: { stringValue: String(obj.turno || "") },
-      valorTotal: { doubleValue: Number(obj.valorTotal) || 0 },
-      valorPago: { doubleValue: Number(obj.valorPago) || 0 },
-      despesas: { doubleValue: Number(obj.despesas) || 0 },
-      pagamento: { stringValue: String(obj.pagamento || "PIX") },
-      obs: { stringValue: String(obj.obs || "") }
-    }
-  };
-}
-
-function deFirestore(doc) {
-  const f = doc.fields || {};
-  const id = doc.name.split("/").pop();
-  return {
-    id,
-    cliente: f.cliente?.stringValue || "",
-    telefone: f.telefone?.stringValue || "",
-    convidados: Number(f.convidados?.integerValue || 0),
-    tipo: f.tipo?.stringValue || "",
-    status: f.status?.stringValue || "orcamento",
-    data: f.data?.stringValue || "",
-    turno: f.turno?.stringValue || "",
-    valorTotal: Number(f.valorTotal?.doubleValue ?? f.valorTotal?.integerValue ?? 0),
-    valorPago: Number(f.valorPago?.doubleValue ?? f.valorPago?.integerValue ?? 0),
-    despesas: Number(f.despesas?.doubleValue ?? f.despesas?.integerValue ?? 0),
-    pagamento: f.pagamento?.stringValue || "PIX",
-    obs: f.obs?.stringValue || ""
-  };
-}
-
+// 2. CARREGAMENTO DA NUVEM (SUPABASE)
 async function carregarEventos() {
   const statusEl = document.getElementById("status-conexao");
   try {
-    const res = await fetch(`${FIRESTORE_URL}&pageSize=500`);
-    const json = await res.json();
-
-    if (json.error) {
-      throw new Error(json.error.message);
+    const res = await fetch(`${API_URL}?select=*&order=data.asc`, { headers: HEADERS });
+    if (!res.ok) {
+      const errTxt = await res.text();
+      throw new Error(errTxt);
     }
+    const lista = await res.json();
 
-    eventosCache = (json.documents || []).map(deFirestore);
-    eventosCache.sort((a, b) => a.data.localeCompare(b.data));
+    eventosCache = lista.map(item => ({
+      ...item,
+      valorTotal: Number(item.valor_total || 0),
+      valorPago: Number(item.valor_pago || 0),
+      despesas: Number(item.despesas || 0)
+    }));
 
     statusEl.innerHTML = "● Sincronizado";
     statusEl.style.color = "#10b981";
@@ -100,15 +66,14 @@ async function carregarEventos() {
   } catch (err) {
     statusEl.innerHTML = "● Erro Banco";
     statusEl.style.color = "#ef4444";
-    console.error("Erro Firestore:", err);
+    console.error("Erro Supabase:", err);
   }
 }
 
 carregarEventos();
 setInterval(carregarEventos, 15000);
-// ==========================================
-// 3. DATA ATUAL, ABAS E SALVAMENTO
-// ==========================================
+
+// 3. DATA ATUAL E ABAS
 const filtroMes = document.getElementById("filtro-mes");
 const hoje = new Date();
 filtroMes.value = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, "0")}`;
@@ -123,7 +88,7 @@ document.querySelectorAll(".tab-btn").forEach(btn => {
     document.getElementById("view-calendario").style.display = view === "calendario" ? "block" : "none";
   });
 });
-
+// 4. SALVAR E EDITAR EVENTOS
 document.getElementById("form-evento").addEventListener("submit", async (e) => {
   e.preventDefault();
   const btnSalvar = document.getElementById("btn-salvar");
@@ -159,30 +124,28 @@ document.getElementById("form-evento").addEventListener("submit", async (e) => {
     status: statusEvento,
     data: dataEvento,
     turno: turnoEvento,
-    valorTotal: parseFloat(document.getElementById("valorTotal").value) || 0,
-    valorPago: parseFloat(document.getElementById("valorPago").value) || 0,
+    valor_total: parseFloat(document.getElementById("valorTotal").value) || 0,
+    valor_pago: parseFloat(document.getElementById("valorPago").value) || 0,
     despesas: parseFloat(document.getElementById("despesas").value) || 0,
     pagamento: document.getElementById("pagamento").value,
     obs: document.getElementById("obs").value.trim()
   };
 
   try {
-    let url = FIRESTORE_URL;
+    let url = API_URL;
     let method = "POST";
-
     if (idEdicao) {
-      url = `https://googleapis.com{PROJECT_ID}/databases/(default)/documents/eventos/${idEdicao}?key=${API_KEY}`;
+      url = `${API_URL}?id=eq.${idEdicao}`;
       method = "PATCH";
     }
 
     const res = await fetch(url, {
       method,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(paraFirestore(dados))
+      headers: HEADERS,
+      body: JSON.stringify(dados)
     });
 
-    const json = await res.json();
-    if (json.error) throw new Error(json.error.message);
+    if (!res.ok) throw new Error(await res.text());
 
     fecharModal();
     await carregarEventos();
@@ -193,10 +156,7 @@ document.getElementById("form-evento").addEventListener("submit", async (e) => {
     btnSalvar.innerText = "💾 Salvar na Nuvem";
   }
 });
-
-// ==========================================
-// 4. FINANCEIRO E LISTA DE EVENTOS
-// ==========================================
+// 5. FINANCEIRO E LISTA DE CARDS
 function formatarBRL(val) {
   return (val || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
@@ -272,9 +232,7 @@ function renderizarLista(eventosMes) {
     `;
   }).join("");
 }
-// ==========================================
-// 5. CALENDÁRIO VISUAL INTERATIVO
-// ==========================================
+// 6. CALENDÁRIO VISUAL, WHATSAPP, PDF E MODAL
 function renderizarCalendario(mesSel, eventosMes) {
   const grid = document.getElementById("cal-grid");
   const detalhe = document.getElementById("cal-detalhe-dia");
@@ -330,9 +288,6 @@ window.agendarNaData = (dataISO) => {
   document.getElementById("data").value = dataISO;
 };
 
-// ==========================================
-// 6. WHATSAPP, RECIBO PDF E MODAL
-// ==========================================
 window.enviarComprovanteWhats = (id) => {
   const ev = eventosCache.find(item => item.id === id);
   if (!ev) return;
@@ -410,8 +365,7 @@ window.editarEvento = (id) => {
 window.excluirEvento = async (id) => {
   if (confirm("Deseja realmente excluir este evento da agenda?")) {
     try {
-      const url = `https://googleapis.com{PROJECT_ID}/databases/(default)/documents/eventos/${id}?key=${API_KEY}`;
-      await fetch(url, { method: "DELETE" });
+      await fetch(`${API_URL}?id=eq.${id}`, { method: "DELETE", headers: HEADERS });
       await carregarEventos();
     } catch (err) {
       alert("Erro ao excluir: " + err.message);
@@ -426,8 +380,8 @@ document.getElementById("busca").addEventListener("input", atualizarSistema);
 document.getElementById("filtro-status").addEventListener("change", atualizarSistema);
 filtroMes.addEventListener("change", atualizarSistema);
 
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/sw.js');
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("/sw.js");
 }
 
 
