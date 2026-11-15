@@ -574,9 +574,17 @@ function abrirModal() {
   document.getElementById("valorTotal").value = "R$ 0,00";
   document.getElementById("valorPago").value = "R$ 0,00";
   document.getElementById("despesas").value = "R$ 0,00";
+  document.getElementById("obs").value = "[12:08, 15/11/2026] Josue: jm-eventos-agenda.vercel.app
+[12:51, 15/11/2026] Mica Amor: INFORMAÇÕES SOBRE ESPAÇO DE LAZER (JM EVENTOS)                                                            🚨⚠️⚠️⚠️⚠️⚠️⚠️⚠️.                         Obs: se deixa o espaço sujo é cobrado uma taxa de limpeza no valor de 50,00 reais, 
+
+🚨⚠️⚠️⚠️⚠️⚠️⚠️
+♦️ CUIDADO COM AS CRIANÇAS NA PISCINA PRA NÃO PULAR E SE MACHUCAR.                                                      ♦️ANTES DE ENTRAR NA PISCINA TOMA BANHO NO CHUVEIRO.                                                                      ♦️SOM PELO SISTEMA  ALEXA 
+ ⚠️⚠️❌🔇 NÃO ACEITAMOS SOM DE CARRO NEM PAREDÃO. 
+♦️ SOMENTE SOM AMBIENTE..";
   document.getElementById("modal-titulo").innerText = "Novo Agendamento";
   document.getElementById("modal-form").classList.add("active");
 }
+
 
 function fecharModal() {
   document.getElementById("modal-form").classList.remove("active");
