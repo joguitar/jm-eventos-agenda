@@ -1,7 +1,7 @@
-self.addEventListener('install', (e) => {
+self.addEventListener("install", () => {
   self.skipWaiting();
 });
 
-self.addEventListener('fetch', (event) => {
-  // Necessário para habilitar a instalação PWA no Android
+self.addEventListener("fetch", () => {
+  // Habilita instalação PWA no Android
 });
