@@ -18,7 +18,7 @@ let eventosCache = [];
 let clientesCache = [];
 
 // ==========================================
-// 1. MÁSCARAS DE TELEFONE E MOEDA (CORRIGIDA)
+// 1. MÁSCARAS DE TELEFONE E MOEDA (R$)
 // ==========================================
 function aplicarMascaraTelefone(valor) {
   let v = String(valor || "").replace(/\D/g, "").slice(0, 11);
@@ -37,7 +37,7 @@ function aplicarMascaraMoeda(valor) {
   if (!v) return "R$ 0,00";
   const num = (parseInt(v, 10) / 100).toFixed(2);
   const partes = num.split(".");
-  partes[0] = partes[0].replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  partes = partes.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
   return `R$ ${partes.join(",")}`;
 }
 
@@ -92,8 +92,28 @@ document.getElementById("btn-sair").addEventListener("click", () => {
   telaLogin.style.display = "flex";
 });
 // ==========================================
-// 3. SINCRONIZAÇÃO COM SUPABASE
+// 3. SINCRONIZAÇÃO COM SUPABASE E FUNÇÕES DE DATA
 // ==========================================
+function formatarPeriodoBR(ev) {
+  const ini = ev.data.split("-").reverse().join("/");
+  if (ev.dataFim && ev.dataFim > ev.data) {
+    const fim = ev.dataFim.split("-").reverse().join("/");
+    return `${ini} até ${fim}`;
+  }
+  return ini;
+}
+
+function eventoCobreDia(ev, diaISO) {
+  const fim = ev.dataFim && ev.dataFim >= ev.data ? ev.dataFim : ev.data;
+  return diaISO >= ev.data && diaISO <= fim;
+}
+
+function eventoNoMes(ev, mesISO) {
+  if (!mesISO) return true;
+  const fim = ev.dataFim && ev.dataFim >= ev.data ? ev.dataFim : ev.data;
+  return ev.data.startsWith(mesISO) || fim.startsWith(mesISO) || (ev.data <= `${mesISO}-01` && fim >= `${mesISO}-28`);
+}
+
 async function carregarEventos() {
   const statusEl = document.getElementById("status-conexao");
   try {
@@ -103,6 +123,7 @@ async function carregarEventos() {
 
     eventosCache = lista.map(item => ({
       ...item,
+      dataFim: item.data_fim || item.data,
       valorTotal: Number(item.valor_total || 0),
       valorPago: Number(item.valor_pago || 0),
       despesas: Number(item.despesas || 0)
@@ -259,7 +280,7 @@ window.excluirCliente = async (id) => {
 
 document.getElementById("busca-cliente").addEventListener("input", renderizarClientes);
 // ==========================================
-// 6. SALVAR E EDITAR EVENTOS (COM FOCO NO MÊS)
+// 6. SALVAR E EDITAR EVENTOS (COM PERÍODO DE DIAS)
 // ==========================================
 document.getElementById("form-evento").addEventListener("submit", async (e) => {
   e.preventDefault();
@@ -268,20 +289,31 @@ document.getElementById("form-evento").addEventListener("submit", async (e) => {
   btnSalvar.innerText = "⏳ Salvando...";
 
   const idEdicao = document.getElementById("evento-id").value;
-  const dataEvento = document.getElementById("data").value;
+  const dataInicio = document.getElementById("data").value;
+  const dataFimInput = document.getElementById("dataFim").value;
+  const dataFinal = dataFimInput && dataFimInput >= dataInicio ? dataFimInput : dataInicio;
+
+  if (dataFimInput && dataFimInput < dataInicio) {
+    alert("⚠️ A Data Fim não pode ser anterior à Data Início.");
+    btnSalvar.disabled = false;
+    btnSalvar.innerText = "💾 Salvar na Nuvem";
+    return;
+  }
+
   const turnoEvento = document.getElementById("turno").value;
   const statusEvento = document.getElementById("status").value;
 
   if (statusEvento !== "cancelado") {
-    const conflito = eventosCache.find(ev =>
-      ev.id !== idEdicao &&
-      ev.status !== "cancelado" &&
-      ev.data === dataEvento &&
-      (ev.turno === turnoEvento || ev.turno === "Integral (Dia Todo)" || turnoEvento === "Integral (Dia Todo)")
-    );
+    const conflito = eventosCache.find(ev => {
+      if (ev.id === idEdicao || ev.status === "cancelado") return false;
+      const evFim = ev.dataFim && ev.dataFim >= ev.data ? ev.dataFim : ev.data;
+      const sobrepoeDatas = dataInicio <= evFim && dataFinal >= ev.data;
+      const mesmoTurno = ev.turno === turnoEvento || ev.turno === "Integral (Dia Todo)" || turnoEvento === "Integral (Dia Todo)";
+      return sobrepoeDatas && mesmoTurno;
+    });
 
     if (conflito) {
-      alert(`⚠️ CONFLITO DE AGENDA!\nA data ${dataEvento.split("-").reverse().join("/")} já possui reserva (${conflito.cliente} - ${conflito.turno}).`);
+      alert(`⚠️ CONFLITO DE AGENDA!\nJá existe reserva no período (${formatarPeriodoBR(conflito)} - ${conflito.cliente}).`);
       btnSalvar.disabled = false;
       btnSalvar.innerText = "💾 Salvar na Nuvem";
       return;
@@ -294,7 +326,8 @@ document.getElementById("form-evento").addEventListener("submit", async (e) => {
     convidados: parseInt(document.getElementById("convidados").value) || 0,
     tipo: document.getElementById("tipo").value,
     status: statusEvento,
-    data: dataEvento,
+    data: dataInicio,
+    data_fim: dataFinal,
     turno: turnoEvento,
     valor_total: desformatarMoeda(document.getElementById("valorTotal").value),
     valor_pago: desformatarMoeda(document.getElementById("valorPago").value),
@@ -320,8 +353,8 @@ document.getElementById("form-evento").addEventListener("submit", async (e) => {
     if (!res.ok) throw new Error(await res.text());
 
     fecharModal();
-    if (dataEvento && dataEvento.length >= 7) {
-      const mesDoEvento = dataEvento.slice(0, 7);
+    if (dataInicio && dataInicio.length >= 7) {
+      const mesDoEvento = dataInicio.slice(0, 7);
       filtroMes.value = mesDoEvento;
       calMesPicker.value = mesDoEvento;
     }
@@ -343,7 +376,7 @@ function formatarBRL(val) {
 
 function atualizarSistema() {
   const mesSel = filtroMes.value;
-  const eventosMes = eventosCache.filter(ev => !mesSel || ev.data.startsWith(mesSel));
+  const eventosMes = eventosCache.filter(ev => eventoNoMes(ev, mesSel));
 
   let recebido = 0, aReceber = 0, despesas = 0;
   eventosMes.forEach(ev => {
@@ -383,13 +416,13 @@ function renderizarLista(eventosMes) {
   }
 
   lista.innerHTML = filtrados.map(ev => {
-    const dataBR = ev.data.split("-").reverse().join("/");
+    const periodoBR = formatarPeriodoBR(ev);
     const restante = Math.max(0, (ev.valorTotal || 0) - (ev.valorPago || 0));
 
     return `
       <div class="event-item ${ev.status}">
         <div class="event-header">
-          <span class="event-date">📅 ${dataBR} • ${ev.turno}</span>
+          <span class="event-date">📅 ${periodoBR} • ${ev.turno}</span>
           <span class="badge ${ev.status}">${ev.status}</span>
         </div>
         <h3 class="event-title">${ev.cliente}</h3>
@@ -412,7 +445,7 @@ function renderizarLista(eventosMes) {
   }).join("");
 }
 // ==========================================
-// 8. CALENDÁRIO VISUAL, WHATSAPP, PDF E MODAL
+// 8. CALENDÁRIO VISUAL (MULTI-DIAS), WHATSAPP, PDF E MODAL
 // ==========================================
 function renderizarCalendario(mesSel, eventosMes) {
   const grid = document.getElementById("cal-grid");
@@ -433,7 +466,7 @@ function renderizarCalendario(mesSel, eventosMes) {
 
   for (let dia = 1; dia <= totalDiasMes; dia++) {
     const dataISO = `${ano}-${String(mes).padStart(2, "0")}-${String(dia).padStart(2, "0")}`;
-    const evsDia = eventosMes.filter(e => e.data === dataISO && e.status !== "cancelado");
+    const evsDia = eventosMes.filter(e => e.status !== "cancelado" && eventoCobreDia(e, dataISO));
     let classeStatus = "";
     if (evsDia.some(e => e.status === "confirmado" || e.status === "concluido")) classeStatus = "has-confirmado";
     else if (evsDia.some(e => e.status === "orcamento")) classeStatus = "has-orcamento";
@@ -446,7 +479,7 @@ window.selecionarDiaCalendario = (dataISO, elemento) => {
   document.querySelectorAll(".cal-day").forEach(d => d.classList.remove("selected"));
   elemento.classList.add("selected");
   const dataBR = dataISO.split("-").reverse().join("/");
-  const evsDia = eventosCache.filter(e => e.data === dataISO && e.status !== "cancelado");
+  const evsDia = eventosCache.filter(e => e.status !== "cancelado" && eventoCobreDia(e, dataISO));
   const detalhe = document.getElementById("cal-detalhe-dia");
 
   if (evsDia.length === 0) {
@@ -458,7 +491,7 @@ window.selecionarDiaCalendario = (dataISO, elemento) => {
   } else {
     detalhe.innerHTML = evsDia.map(ev => `
       <div style="margin-bottom:8px;">
-        <strong style="color:var(--gold)">📅 ${dataBR} (${ev.turno})</strong><br>
+        <strong style="color:var(--gold)">📅 ${formatarPeriodoBR(ev)} (${ev.turno})</strong><br>
         Cliente: <b>${ev.cliente}</b> — ${ev.tipo} (${ev.status.toUpperCase()})
       </div>`).join("");
   }
@@ -467,16 +500,17 @@ window.selecionarDiaCalendario = (dataISO, elemento) => {
 window.agendarNaData = (dataISO) => {
   abrirModal();
   document.getElementById("data").value = dataISO;
+  document.getElementById("dataFim").value = dataISO;
 };
 
 window.enviarComprovanteWhats = (id) => {
   const ev = eventosCache.find(item => item.id === id);
   if (!ev) return;
-  const dataBR = ev.data.split("-").reverse().join("/");
+  const periodoBR = formatarPeriodoBR(ev);
   const restante = Math.max(0, (ev.valorTotal || 0) - (ev.valorPago || 0));
   const numLimpo = ev.telefone.replace(/\D/g, "");
   const mensagem = `*JM EVENTOS - COMPROVANTE DE RESERVA* ✨\n\n` +
-    `👤 *Cliente:* ${ev.cliente}\n🎉 *Evento:* ${ev.tipo}\n📅 *Data:* ${dataBR}\n⏰ *Turno:* ${ev.turno}\n📌 *Status:* ${ev.status.toUpperCase()}\n\n` +
+    `👤 *Cliente:* ${ev.cliente}\n🎉 *Evento:* ${ev.tipo}\n📅 *Período:* ${periodoBR}\n⏰ *Turno:* ${ev.turno}\n📌 *Status:* ${ev.status.toUpperCase()}\n\n` +
     `💰 *Valor Total:* ${formatarBRL(ev.valorTotal)}\n✅ *Valor Pago (Sinal):* ${formatarBRL(ev.valorPago)}\n⏳ *Saldo Restante:* ${formatarBRL(restante)}\n\n` +
     (ev.obs ? `📝 *Observações:* ${ev.obs}\n\n` : ``) + `_Agradecemos a preferência!_`;
   window.open(`https://wa.me{numLimpo}?text=${encodeURIComponent(mensagem)}`, "_blank");
@@ -485,7 +519,7 @@ window.enviarComprovanteWhats = (id) => {
 window.gerarReciboPDF = (id) => {
   const ev = eventosCache.find(item => item.id === id);
   if (!ev) return;
-  const dataBR = ev.data.split("-").reverse().join("/");
+  const periodoBR = formatarPeriodoBR(ev);
   const restante = Math.max(0, (ev.valorTotal || 0) - (ev.valorPago || 0));
   document.getElementById("area-recibo").innerHTML = `
     <div style="border: 2px solid #000; padding: 24px; max-width: 700px; margin: 0 auto;">
@@ -497,7 +531,7 @@ window.gerarReciboPDF = (id) => {
       <p><strong>Cliente:</strong> ${ev.cliente}</p>
       <p><strong>Telefone:</strong> ${aplicarMascaraTelefone(ev.telefone)}</p>
       <p><strong>Tipo de Evento:</strong> ${ev.tipo} ${ev.convidados ? `(${ev.convidados} convidados)` : ''}</p>
-      <p><strong>Data Reservada:</strong> ${dataBR} — <strong>Turno:</strong> ${ev.turno}</p>
+      <p><strong>Período Reservado:</strong> ${periodoBR} — <strong>Turno:</strong> ${ev.turno}</p>
       <p><strong>Status Atual:</strong> ${ev.status.toUpperCase()}</p>
       <hr style="margin: 16px 0;">
       <p><strong>Valor Total Acordado:</strong> ${formatarBRL(ev.valorTotal)}</p>
@@ -536,6 +570,7 @@ window.editarEvento = (id) => {
   document.getElementById("tipo").value = ev.tipo;
   document.getElementById("status").value = ev.status;
   document.getElementById("data").value = ev.data;
+  document.getElementById("dataFim").value = ev.dataFim || ev.data;
   document.getElementById("turno").value = ev.turno;
   document.getElementById("valorTotal").value = formatarBRL(ev.valorTotal);
   document.getElementById("valorPago").value = formatarBRL(ev.valorPago);
