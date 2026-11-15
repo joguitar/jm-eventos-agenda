@@ -2,7 +2,7 @@
 const SENHA_ACESSO = "1234";
 
 // 🟢 CONFIGURAÇÃO SUPABASE JM-EVENTOS
-const SUPABASE_URL = "https://dpdvvwnybjoeyzqgdaru.supabase.co";
+const SUPABASE_URL = "https://supabase.co";
 const SUPABASE_KEY = "sb_publishable_Bbu0Z3jm3USgVhkn8dFuTA_qoPgtoct";
 
 const API_URL = `${SUPABASE_URL}/rest/v1/eventos`;
@@ -211,9 +211,9 @@ document.getElementById("form-regras").addEventListener("submit", async (e) => {
     });
     if (!res.ok) throw new Error(await res.text());
     regrasGeraisCache = novoTexto;
-    alert("✅ Regras do espaço atualizadas! Todos os próximos recibos e comprovantes usarão este texto.");
+    alert("✅ Regras do recibo atualizadas com sucesso!");
   } catch (err) {
-    alert("Erro ao salvar regras (verifique se criou a tabela 'config' no Supabase): " + err.message);
+    alert("Erro ao salvar regras: " + err.message);
   } finally {
     btn.disabled = false;
     btn.innerText = "💾 Salvar Regras na Nuvem";
@@ -352,7 +352,7 @@ window.excluirCliente = async (id) => {
 
 document.getElementById("busca-cliente").addEventListener("input", renderizarClientes);
 // ==========================================
-// 6. SALVAR E EDITAR EVENTOS
+// 6. SALVAR E EDITAR EVENTOS (SEM CAMPO OBS)
 // ==========================================
 document.getElementById("form-evento").addEventListener("submit", async (e) => {
   e.preventDefault();
@@ -404,8 +404,7 @@ document.getElementById("form-evento").addEventListener("submit", async (e) => {
     valor_total: desformatarMoeda(document.getElementById("valorTotal").value),
     valor_pago: desformatarMoeda(document.getElementById("valorPago").value),
     despesas: desformatarMoeda(document.getElementById("despesas").value),
-    pagamento: document.getElementById("pagamento").value,
-    obs: document.getElementById("obs").value.trim()
+    pagamento: document.getElementById("pagamento").value
   };
 
   try {
@@ -499,7 +498,6 @@ function renderizarLista(eventosMes) {
         </div>
         <h3 class="event-title">${ev.cliente}</h3>
         <div class="event-meta">🎉 ${ev.tipo} ${ev.convidados ? `• 👥 ${ev.convidados} conv.` : ''} • 💳 ${ev.pagamento || 'PIX'}</div>
-        ${ev.obs ? `<div class="event-obs" style="white-space: pre-line;">📝 ${ev.obs}</div>` : ''}
 
         <div class="finance-strip">
           <span><small>Total</small><b>${formatarBRL(ev.valorTotal)}</b></span>
@@ -517,7 +515,7 @@ function renderizarLista(eventosMes) {
   }).join("");
 }
 // ==========================================
-// 8. CALENDÁRIO, WHATSAPP, RECIBO PDF COM REGRAS GERAIS E MODAL
+// 8. CALENDÁRIO, WHATSAPP, RECIBO PDF E MODAL
 // ==========================================
 function renderizarCalendario(mesSel, todosEventos) {
   const grid = document.getElementById("cal-grid");
@@ -582,11 +580,9 @@ window.enviarComprovanteWhats = (id) => {
   const periodoBR = formatarPeriodoBR(ev);
   const restante = Math.max(0, (ev.valorTotal || 0) - (ev.valorPago || 0));
   const numLimpo = ev.telefone.replace(/\D/g, "");
-  const mensagem = `*JM EVENTOS - COMPROVANTE DE RESERVA* ✨\n\n` +
+  const mensagem = `*JM EVENTOS - RESUMO DE RESERVA* ✨\n\n` +
     `👤 *Cliente:* ${ev.cliente}\n🎉 *Evento:* ${ev.tipo}\n📅 *Período:* ${periodoBR}\n⏰ *Turno:* ${ev.turno}\n📌 *Status:* ${ev.status.toUpperCase()}\n\n` +
     `💰 *Valor Total:* ${formatarBRL(ev.valorTotal)}\n✅ *Valor Pago (Sinal):* ${formatarBRL(ev.valorPago)}\n⏳ *Saldo Restante:* ${formatarBRL(restante)}\n\n` +
-    (ev.obs ? `📝 *Observação do Evento:* ${ev.obs}\n\n` : ``) +
-    (regrasGeraisCache ? `${regrasGeraisCache}\n\n` : ``) +
     `_Agradecemos a preferência!_`;
   window.open(`https://wa.me{numLimpo}?text=${encodeURIComponent(mensagem)}`, "_blank");
 };
@@ -615,7 +611,6 @@ window.gerarReciboPDF = (id) => {
       <p><strong>Valor Total Acordado:</strong> ${formatarBRL(ev.valorTotal)}</p>
       <p><strong>Valor Recebido (Sinal):</strong> ${formatarBRL(ev.valorPago)} (${ev.pagamento || 'PIX'})</p>
       <p><strong>Saldo Restante a Pagar:</strong> ${formatarBRL(restante)}</p>
-      ${ev.obs ? `<p><strong>Observações do Evento:</strong> ${ev.obs}</p>` : ''}
       ${regrasGeraisCache ? `<div style="white-space: pre-line; margin-top: 14px; padding: 12px; border: 1px solid #000; background-color: #f9f9f9; font-size: 13px;">${regrasGeraisCache}</div>` : ''}
       <div style="margin-top: 45px; display: flex; justify-content: space-between; text-align: center;">
         <div style="width: 45%; border-top: 1px solid #000; padding-top: 6px;">JM Eventos (Locador)</div>
@@ -664,7 +659,6 @@ window.editarEvento = (id) => {
   document.getElementById("valorPago").value = formatarBRL(ev.valorPago);
   document.getElementById("despesas").value = formatarBRL(ev.despesas || 0);
   document.getElementById("pagamento").value = ev.pagamento || "PIX";
-  document.getElementById("obs").value = ev.obs || "";
   document.getElementById("modal-titulo").innerText = "Editar Agendamento";
   document.getElementById("modal-form").classList.add("active");
 };
