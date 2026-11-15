@@ -18,7 +18,7 @@ let eventosCache = [];
 let clientesCache = [];
 
 // ==========================================
-// 1. MÁSCARAS DE TELEFONE E MOEDA (R$)
+// 1. MÁSCARAS DE TELEFONE, MOEDA E DATAS
 // ==========================================
 function aplicarMascaraTelefone(valor) {
   let v = String(valor || "").replace(/\D/g, "").slice(0, 11);
@@ -59,6 +59,15 @@ document.getElementById("cad-telefone").addEventListener("input", (e) => {
   document.getElementById(id).addEventListener("input", (e) => {
     e.target.value = aplicarMascaraMoeda(e.target.value);
   });
+});
+
+document.getElementById("data").addEventListener("change", (e) => {
+  const dataIni = e.target.value;
+  const campoFim = document.getElementById("dataFim");
+  campoFim.min = dataIni;
+  if (!campoFim.value || campoFim.value < dataIni) {
+    campoFim.value = dataIni;
+  }
 });
 
 // ==========================================
@@ -114,6 +123,8 @@ function eventoNoMes(ev, mesISO) {
   return ev.data.startsWith(mesISO) || fim.startsWith(mesISO) || (ev.data <= `${mesISO}-01` && fim >= `${mesISO}-28`);
 }
 
+let primeiraCarga = true;
+
 async function carregarEventos() {
   const statusEl = document.getElementById("status-conexao");
   try {
@@ -128,6 +139,14 @@ async function carregarEventos() {
       valorPago: Number(item.valor_pago || 0),
       despesas: Number(item.despesas || 0)
     }));
+
+    if (primeiraCarga && eventosCache.length > 0) {
+      primeiraCarga = false;
+      const temNoMesAtual = eventosCache.some(ev => eventoNoMes(ev, filtroMes.value));
+      if (!temNoMesAtual) {
+        filtroMes.value = "";
+      }
+    }
 
     statusEl.innerHTML = "● Sincronizado";
     statusEl.style.color = "#10b981";
@@ -151,13 +170,6 @@ async function carregarClientes() {
   }
 }
 
-carregarEventos();
-carregarClientes();
-setInterval(() => {
-  carregarEventos();
-  carregarClientes();
-}, 15000);
-
 // ==========================================
 // 4. CONTROLE DE MÊS SINCRONIZADO E ABAS
 // ==========================================
@@ -171,12 +183,13 @@ calMesPicker.value = mesInicial;
 
 function alterarMesGlobal(novoMes) {
   filtroMes.value = novoMes;
-  calMesPicker.value = novoMes;
+  if (novoMes) calMesPicker.value = novoMes;
   atualizarSistema();
 }
 
 filtroMes.addEventListener("change", () => alterarMesGlobal(filtroMes.value));
 calMesPicker.addEventListener("change", () => alterarMesGlobal(calMesPicker.value));
+document.getElementById("btn-todos-meses").addEventListener("click", () => alterarMesGlobal(""));
 
 function mudarMesPasso(delta) {
   const atual = calMesPicker.value || mesInicial;
@@ -200,6 +213,13 @@ document.querySelectorAll(".tab-btn").forEach(btn => {
     document.getElementById("view-clientes").style.display = view === "clientes" ? "block" : "none";
   });
 });
+
+carregarEventos();
+carregarClientes();
+setInterval(() => {
+  carregarEventos();
+  carregarClientes();
+}, 15000);
 // ==========================================
 // 5. CADASTRO DE CLIENTES
 // ==========================================
@@ -394,7 +414,7 @@ function atualizarSistema() {
   document.getElementById("res-lucro").innerText = formatarBRL(recebido - despesas);
 
   renderizarLista(eventosMes);
-  renderizarCalendario(mesSel, eventosMes);
+  renderizarCalendario(calMesPicker.value || mesSel, eventosCache);
 }
 
 function renderizarLista(eventosMes) {
@@ -411,7 +431,7 @@ function renderizarLista(eventosMes) {
   });
 
   if (filtrados.length === 0) {
-    lista.innerHTML = `<p class="msg-vazia">Nenhum agendamento encontrado neste mês.</p>`;
+    lista.innerHTML = `<p class="msg-vazia">Nenhum agendamento encontrado neste filtro.</p>`;
     return;
   }
 
@@ -447,7 +467,7 @@ function renderizarLista(eventosMes) {
 // ==========================================
 // 8. CALENDÁRIO VISUAL (MULTI-DIAS), WHATSAPP, PDF E MODAL
 // ==========================================
-function renderizarCalendario(mesSel, eventosMes) {
+function renderizarCalendario(mesSel, todosEventos) {
   const grid = document.getElementById("cal-grid");
   const detalhe = document.getElementById("cal-detalhe-dia");
   detalhe.innerHTML = `<span style="color:var(--text-muted)">Toque em um dia para ver detalhes ou agendar.</span>`;
@@ -466,7 +486,7 @@ function renderizarCalendario(mesSel, eventosMes) {
 
   for (let dia = 1; dia <= totalDiasMes; dia++) {
     const dataISO = `${ano}-${String(mes).padStart(2, "0")}-${String(dia).padStart(2, "0")}`;
-    const evsDia = eventosMes.filter(e => e.status !== "cancelado" && eventoCobreDia(e, dataISO));
+    const evsDia = todosEventos.filter(e => e.status !== "cancelado" && eventoCobreDia(e, dataISO));
     let classeStatus = "";
     if (evsDia.some(e => e.status === "confirmado" || e.status === "concluido")) classeStatus = "has-confirmado";
     else if (evsDia.some(e => e.status === "orcamento")) classeStatus = "has-orcamento";
@@ -501,6 +521,7 @@ window.agendarNaData = (dataISO) => {
   abrirModal();
   document.getElementById("data").value = dataISO;
   document.getElementById("dataFim").value = dataISO;
+  document.getElementById("dataFim").min = dataISO;
 };
 
 window.enviarComprovanteWhats = (id) => {
@@ -549,6 +570,7 @@ window.gerarReciboPDF = (id) => {
 function abrirModal() {
   document.getElementById("form-evento").reset();
   document.getElementById("evento-id").value = "";
+  document.getElementById("dataFim").min = "";
   document.getElementById("valorTotal").value = "R$ 0,00";
   document.getElementById("valorPago").value = "R$ 0,00";
   document.getElementById("despesas").value = "R$ 0,00";
@@ -571,6 +593,7 @@ window.editarEvento = (id) => {
   document.getElementById("status").value = ev.status;
   document.getElementById("data").value = ev.data;
   document.getElementById("dataFim").value = ev.dataFim || ev.data;
+  document.getElementById("dataFim").min = ev.data;
   document.getElementById("turno").value = ev.turno;
   document.getElementById("valorTotal").value = formatarBRL(ev.valorTotal);
   document.getElementById("valorPago").value = formatarBRL(ev.valorPago);
@@ -601,6 +624,7 @@ document.getElementById("filtro-status").addEventListener("change", atualizarSis
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("/sw.js");
 }
+
 
 
 
