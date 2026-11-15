@@ -1,12 +1,4 @@
-const firebaseConfig = {
-  apiKey: "AIzaSyAeMUCVEsDW9bocBxBqkVv2UEUyr5aPlhU",
-  authDomain: "jm-eventos.firebaseapp.com",
-  projectId: "jm-eventos",
-  storageBucket: "jm-eventos.firebasestorage.app",
-  messagingSenderId: "1013643921839",
-  appId: "1:1013643921839:web:159ac653bd7aa19883c75a",
-  measurementId: "G-6RGCNV8EX4"
-};
+
 
 import { initializeApp } from "https://gstatic.com";
 import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, query, orderBy } from "https://gstatic.com";
@@ -16,12 +8,13 @@ const SENHA_ACESSO = "1234";
 
 // ⚠️ COLE AQUI AS CREDENCIAIS DO SEU PROJETO FIREBASE
 const firebaseConfig = {
-  apiKey: "SUA_API_KEY",
-  authDomain: "SEU_://firebaseapp.com",
-  projectId: "SEU_PROJECT_ID",
-  storageBucket: "SEU_://appspot.com",
-  messagingSenderId: "SEU_SENDER_ID",
-  appId: "SEU_APP_ID"
+  apiKey: "AIzaSyAeMUCVEsDW9bocBxBqkVv2UEUyr5aPlhU",
+  authDomain: "jm-eventos.firebaseapp.com",
+  projectId: "jm-eventos",
+  storageBucket: "jm-eventos.firebasestorage.app",
+  messagingSenderId: "1013643921839",
+  appId: "1:1013643921839:web:159ac653bd7aa19883c75a",
+  measurementId: "G-6RGCNV8EX4"
 };
 
 const app = initializeApp(firebaseConfig);
