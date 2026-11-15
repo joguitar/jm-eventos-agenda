@@ -585,18 +585,41 @@ window.agendarNaData = (dataISO) => {
 window.enviarComprovanteWhats = (id) => {
   const ev = eventosCache.find(item => String(item.id) === String(id));
   if (!ev) return;
+
   const periodoBR = formatarPeriodoBR(ev);
   const restante = Math.max(0, (ev.valorTotal || 0) - (ev.valorPago || 0));
+
   let numLimpo = String(ev.telefone || "").replace(/\D/g, "");
   if (numLimpo.startsWith("55") && numLimpo.length >= 12) {
     numLimpo = numLimpo.slice(2);
   }
+
+  if (numLimpo.length < 10) {
+    alert("⚠️ Número de WhatsApp inválido! Edite o evento e informe o DDD + número (ex: 85999999999).");
+    return;
+  }
+
   const mensagem = `*JM EVENTOS - RESUMO DE RESERVA* ✨\n\n` +
-    `👤 *Cliente:* ${ev.cliente}\n🎉 *Evento:* ${ev.tipo}\n📅 *Período:* ${periodoBR}\n⏰ *Turno:* ${ev.turno}\n📌 *Status:* ${ev.status.toUpperCase()}\n\n` +
-    `💰 *Valor Total:* ${formatarBRL(ev.valorTotal)}\n✅ *Valor Pago (Sinal):* ${formatarBRL(ev.valorPago)}\n⏳ *Saldo Restante:* ${formatarBRL(restante)}\n\n` +
+    `👤 *Cliente:* ${ev.cliente}\n` +
+    `🎉 *Evento:* ${ev.tipo}\n` +
+    `📅 *Período:* ${periodoBR}\n` +
+    `⏰ *Turno:* ${ev.turno}\n` +
+    `📌 *Status:* ${ev.status.toUpperCase()}\n\n` +
+    `💰 *Valor Total:* ${formatarBRL(ev.valorTotal)}\n` +
+    `✅ *Valor Pago (Sinal):* ${formatarBRL(ev.valorPago)}\n` +
+    `⏳ *Saldo Restante:* ${formatarBRL(restante)}\n\n` +
     `_Agradecemos a preferência!_`;
-  window.open(`https://wa.me{numLimpo}?text=${encodeURIComponent(mensagem)}`, "_blank");
+
+  const textoCodificado = encodeURIComponent(mensagem);
+  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+  if (isMobile) {
+    window.location.href = `whatsapp://send?phone=55${numLimpo}&text=${textoCodificado}`;
+  } else {
+    window.open(`https://whatsapp.com{numLimpo}&text=${textoCodificado}`, "_blank");
+  }
 };
+
 
 window.gerarReciboPDF = (id) => {
   const ev = eventosCache.find(item => String(item.id) === String(id));
