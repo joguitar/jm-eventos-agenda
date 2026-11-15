@@ -87,9 +87,10 @@ async function iniciarFirebase() {
   } catch (err) {
     statusEl.innerHTML = "● Falha Conexão";
     statusEl.style.color = "#ef4444";
-    console.error("Erro ao iniciar Firebase:", err);
+    alert("Detalhe do erro ao carregar Firebase: " + (err.message || "Bloqueio de rede/script"));
   }
 }
+
 
 iniciarFirebase();
 // ==========================================
