@@ -3,6 +3,7 @@
 import { initializeApp } from "https://gstatic.com";
 import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, query, orderBy } from "https://gstatic.com";
 
+
 // 🔐 DEFINA SUA SENHA DE ACESSO AQUI
 const SENHA_ACESSO = "1234";
 
