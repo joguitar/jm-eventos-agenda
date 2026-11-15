@@ -336,6 +336,31 @@ input:focus, select:focus, textarea:focus {
   padding: 14px;
 }
 
+.cal-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.cal-nav .month-picker {
+  flex: 1;
+  text-align: center;
+  font-weight: bold;
+}
+
+.btn-cal-nav {
+  background: #000000;
+  color: var(--gold);
+  border: 1px solid var(--gold);
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+
 .cal-legend {
   display: flex;
   justify-content: center;
