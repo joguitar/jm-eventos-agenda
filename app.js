@@ -2,7 +2,7 @@
 const SENHA_ACESSO = "1234";
 
 // 🟢 CONFIGURAÇÃO SUPABASE JM-EVENTOS
-const SUPABASE_URL = "https://dpdvvwnybjoeyzqgdaru.supabase.co";
+const SUPABASE_URL = "https://supabase.co";
 const SUPABASE_KEY = "sb_publishable_Bbu0Z3jm3USgVhkn8dFuTA_qoPgtoct";
 
 const API_URL = `${SUPABASE_URL}/rest/v1/eventos`;
@@ -18,7 +18,7 @@ let eventosCache = [];
 let clientesCache = [];
 
 // ==========================================
-// 1. MÁSCARAS DE TELEFONE E MOEDA (R$)
+// 1. MÁSCARAS DE TELEFONE E MOEDA (CORRIGIDA)
 // ==========================================
 function aplicarMascaraTelefone(valor) {
   let v = String(valor || "").replace(/\D/g, "").slice(0, 11);
@@ -37,7 +37,7 @@ function aplicarMascaraMoeda(valor) {
   if (!v) return "R$ 0,00";
   const num = (parseInt(v, 10) / 100).toFixed(2);
   const partes = num.split(".");
-  partes = partes.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  partes[0] = partes[0].replace(/\B(?=(\d{3})+(?!\d))/g, ".");
   return `R$ ${partes.join(",")}`;
 }
 
@@ -92,7 +92,7 @@ document.getElementById("btn-sair").addEventListener("click", () => {
   telaLogin.style.display = "flex";
 });
 // ==========================================
-// 3. SINCRONIZAÇÃO COM SUPABASE (EVENTOS E CLIENTES)
+// 3. SINCRONIZAÇÃO COM SUPABASE
 // ==========================================
 async function carregarEventos() {
   const statusEl = document.getElementById("status-conexao");
@@ -138,11 +138,35 @@ setInterval(() => {
 }, 15000);
 
 // ==========================================
-// 4. DATA ATUAL E NAVEGAÇÃO ENTRE ABAS
+// 4. CONTROLE DE MÊS SINCRONIZADO E ABAS
 // ==========================================
 const filtroMes = document.getElementById("filtro-mes");
+const calMesPicker = document.getElementById("cal-mes-picker");
 const hoje = new Date();
-filtroMes.value = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, "0")}`;
+const mesInicial = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, "0")}`;
+
+filtroMes.value = mesInicial;
+calMesPicker.value = mesInicial;
+
+function alterarMesGlobal(novoMes) {
+  filtroMes.value = novoMes;
+  calMesPicker.value = novoMes;
+  atualizarSistema();
+}
+
+filtroMes.addEventListener("change", () => alterarMesGlobal(filtroMes.value));
+calMesPicker.addEventListener("change", () => alterarMesGlobal(calMesPicker.value));
+
+function mudarMesPasso(delta) {
+  const atual = calMesPicker.value || mesInicial;
+  const [ano, mes] = atual.split("-").map(Number);
+  const novaData = new Date(ano, mes - 1 + delta, 1);
+  const formatado = `${novaData.getFullYear()}-${String(novaData.getMonth() + 1).padStart(2, "0")}`;
+  alterarMesGlobal(formatado);
+}
+
+document.getElementById("btn-mes-ant").addEventListener("click", () => mudarMesPasso(-1));
+document.getElementById("btn-mes-prox").addEventListener("click", () => mudarMesPasso(1));
 
 document.querySelectorAll(".tab-btn").forEach(btn => {
   btn.addEventListener("click", () => {
@@ -156,7 +180,7 @@ document.querySelectorAll(".tab-btn").forEach(btn => {
   });
 });
 // ==========================================
-// 5. CADASTRO E LISTAGEM DE CLIENTES
+// 5. CADASTRO DE CLIENTES
 // ==========================================
 document.getElementById("form-cliente").addEventListener("submit", async (e) => {
   e.preventDefault();
@@ -174,11 +198,10 @@ document.getElementById("form-cliente").addEventListener("submit", async (e) => 
       body: JSON.stringify({ nome, telefone })
     });
     if (!res.ok) throw new Error(await res.text());
-
     document.getElementById("form-cliente").reset();
     await carregarClientes();
   } catch (err) {
-    alert("Erro ao salvar cliente (verifique se criou a tabela 'clientes' no Supabase): " + err.message);
+    alert("Erro ao salvar cliente: " + err.message);
   } finally {
     btn.disabled = false;
     btn.innerText = "Salvar Cliente";
@@ -188,7 +211,6 @@ document.getElementById("form-cliente").addEventListener("submit", async (e) => 
 function renderizarClientes() {
   const lista = document.getElementById("lista-clientes");
   const termo = document.getElementById("busca-cliente").value.toLowerCase();
-
   const filtrados = clientesCache.filter(c =>
     c.nome.toLowerCase().includes(termo) || c.telefone.includes(termo)
   );
@@ -210,8 +232,7 @@ function renderizarClientes() {
           <a href="https://wa.me{numLimpo}" target="_blank" class="btn-act btn-whats" style="padding:8px 12px; text-decoration:none;">WhatsApp</a>
           <button type="button" class="btn-act btn-del" style="padding:8px 10px;" onclick="excluirCliente('${c.id}')">🗑️</button>
         </div>
-      </div>
-    `;
+      </div>`;
   }).join("");
 }
 
@@ -238,7 +259,7 @@ window.excluirCliente = async (id) => {
 
 document.getElementById("busca-cliente").addEventListener("input", renderizarClientes);
 // ==========================================
-// 6. SALVAR E EDITAR EVENTOS
+// 6. SALVAR E EDITAR EVENTOS (COM FOCO NO MÊS)
 // ==========================================
 document.getElementById("form-evento").addEventListener("submit", async (e) => {
   e.preventDefault();
@@ -299,6 +320,11 @@ document.getElementById("form-evento").addEventListener("submit", async (e) => {
     if (!res.ok) throw new Error(await res.text());
 
     fecharModal();
+    if (dataEvento && dataEvento.length >= 7) {
+      const mesDoEvento = dataEvento.slice(0, 7);
+      filtroMes.value = mesDoEvento;
+      calMesPicker.value = mesDoEvento;
+    }
     await carregarEventos();
   } catch (err) {
     alert("Erro ao salvar na nuvem: " + err.message);
@@ -352,7 +378,7 @@ function renderizarLista(eventosMes) {
   });
 
   if (filtrados.length === 0) {
-    lista.innerHTML = `<p class="msg-vazia">Nenhum agendamento encontrado para este período.</p>`;
+    lista.innerHTML = `<p class="msg-vazia">Nenhum agendamento encontrado neste mês.</p>`;
     return;
   }
 
@@ -382,8 +408,7 @@ function renderizarLista(eventosMes) {
           <button type="button" class="btn-act btn-edit" onclick="editarEvento('${ev.id}')">✏️ Editar</button>
           <button type="button" class="btn-act btn-del" onclick="excluirEvento('${ev.id}')">🗑️</button>
         </div>
-      </div>
-    `;
+      </div>`;
   }).join("");
 }
 // ==========================================
@@ -395,7 +420,7 @@ function renderizarCalendario(mesSel, eventosMes) {
   detalhe.innerHTML = `<span style="color:var(--text-muted)">Toque em um dia para ver detalhes ou agendar.</span>`;
 
   if (!mesSel) {
-    grid.innerHTML = `<p style="grid-column:1/-1; text-align:center;">Selecione um mês no topo para ver o calendário.</p>`;
+    grid.innerHTML = `<p style="grid-column:1/-1; text-align:center;">Selecione um mês acima.</p>`;
     return;
   }
 
@@ -537,11 +562,11 @@ document.getElementById("btn-cancelar").addEventListener("click", fecharModal);
 document.getElementById("btn-fechar-x").addEventListener("click", fecharModal);
 document.getElementById("busca").addEventListener("input", atualizarSistema);
 document.getElementById("filtro-status").addEventListener("change", atualizarSistema);
-filtroMes.addEventListener("change", atualizarSistema);
 
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("/sw.js");
 }
+
 
 
 
