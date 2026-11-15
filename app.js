@@ -8,7 +8,6 @@ const SUPABASE_KEY = "sb_publishable_Bbu0Z3jm3USgVhkn8dFuTA_qoPgtoct";
 const API_URL = `${SUPABASE_URL}/rest/v1/eventos`;
 const HEADERS = {
   "apikey": SUPABASE_KEY,
-  "Authorization": `Bearer ${SUPABASE_KEY}`,
   "Content-Type": "application/json",
   "Prefer": "return=representation"
 };
