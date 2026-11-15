@@ -18,7 +18,7 @@
     <h2>JM EVENTOS</h2>
     <p>Acesso Restrito à Administração</p>
     <input type="password" id="input-senha" inputmode="numeric" placeholder="••••" autocomplete="off">
-    <button id="btn-entrar" class="btn-gold">Desbloquear Agenda</button>
+    <button type="button" id="btn-entrar" class="btn-gold">Desbloquear Agenda</button>
     <p id="erro-senha" class="erro-msg">Senha incorreta. Tente novamente.</p>
   </div>
 </div>
@@ -28,10 +28,10 @@
     <img src="/icon.png" alt="JM Eventos">
     <div>
       <h1>JM EVENTOS</h1>
-      <span id="status-conexao">● Sincronizado</span>
+      <span id="status-conexao">● Conectando...</span>
     </div>
   </div>
-  <button id="btn-sair" class="btn-lock" title="Bloquear App">🔒</button>
+  <button type="button" id="btn-sair" class="btn-lock" title="Bloquear App">🔒</button>
 </header>
 
 <main class="container no-print">
@@ -61,8 +61,8 @@
   </section>
 
   <div class="view-tabs">
-    <button class="tab-btn active" data-view="lista">📋 Lista de Eventos</button>
-    <button class="tab-btn" data-view="calendario">📅 Calendário Visual</button>
+    <button type="button" class="tab-btn active" data-view="lista">📋 Lista de Eventos</button>
+    <button type="button" class="tab-btn" data-view="calendario">📅 Calendário Visual</button>
   </div>
 
   <div class="filters" id="box-filtros">
@@ -94,7 +94,7 @@
   </div>
 </main>
 
-<button class="fab no-print" id="btn-novo" title="Novo Agendamento">+</button>
+<button type="button" class="fab no-print" id="btn-novo" title="Novo Agendamento">+</button>
 
 <div class="modal no-print" id="modal-form">
   <div class="modal-content">
@@ -202,8 +202,11 @@
 
 <div id="area-recibo" class="print-only"></div>
 
-<script type="module" src="/app.js"></script>
+<script src="https://gstatic.com"></script>
+<script src="https://gstatic.com"></script>
+<script src="/app.js"></script>
 </body>
 </html>
+
 
 
